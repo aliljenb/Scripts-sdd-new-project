@@ -12,6 +12,12 @@ if [ -z "$PROJECT_NAME" ]; then
     exit 1
 fi
 
+# Project name path-safety validation (no path separators, must not start with '-')
+if [[ "$PROJECT_NAME" == */* ]] || [[ "$PROJECT_NAME" == -* ]]; then
+    echo "Error: Project name must not contain '/' or start with '-'."
+    exit 1
+fi
+
 # Empty module name check
 if [ -z "$MODULE_NAME" ]; then
     echo "Error: Module name cannot be empty."
@@ -24,15 +30,14 @@ if ! [[ "$MODULE_NAME" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
     exit 1
 fi
 
-# Pre-existing directory check
-if [ -d "$PROJECT_NAME" ]; then
-    echo "Error: Directory '$PROJECT_NAME' already exists."
+# Pre-existing path check (reject any existing file or directory, not just directories)
+if [ -e "$PROJECT_NAME" ]; then
+    echo "Error: '$PROJECT_NAME' already exists."
     exit 1
 fi
 
 mkdir -p "$PROJECT_NAME/src/$MODULE_NAME"
 mkdir -p "$PROJECT_NAME/specs"
-mkdir -p "$PROJECT_NAME/tests"
 mkdir -p "$PROJECT_NAME/.claude/commands"
 
 touch "$PROJECT_NAME/src/$MODULE_NAME/__init__.py"
@@ -121,36 +126,20 @@ EOF
 
 cat > "$PROJECT_NAME/.gitignore" << 'EOF'
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 .eggs/
 *.egg-info/
 dist/
 build/
 .venv/
 venv/
+.pytest_cache/
+.mypy_cache/
 .DS_Store
 EOF
-
-cat > "$PROJECT_NAME/pyproject.toml" << EOF
-[project]
-name = "$PROJECT_NAME"
-version = "0.1.0"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-EOF
-
-touch "$PROJECT_NAME/tests/conftest.py"
-
-cd "$PROJECT_NAME"
-git init
-git add -A
-git commit -m "Initial creation"
-cd ..
 
 echo ""
 echo "Project '$PROJECT_NAME' created successfully!"
 echo ""
 echo "Directory structure:"
-find "$PROJECT_NAME" -not -path '*/.git/*' -not -name '.git' | sort | sed 's/^/  /'
+find "$PROJECT_NAME" -print | sed -e "s;[^/]*/;  ;g;s;  \([^ ]\);├─ \1;"
