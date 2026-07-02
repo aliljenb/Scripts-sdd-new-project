@@ -1,12 +1,12 @@
 #!/bin/bash
-# Property-based tests for scaffold.sh, mapped to the 7 correctness
+# Property-based tests for new-sdd-project.sh, mapped to the 7 correctness
 # properties defined in specs/design.md. Each property is checked against
 # a batch of randomly generated inputs rather than a single fixed example.
 
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCAFFOLD="$SCRIPT_DIR/scaffold.sh"
+SCAFFOLD="$SCRIPT_DIR/new-sdd-project.sh"
 FAILURES=0
 ITERATIONS="${ITERATIONS:-20}"
 

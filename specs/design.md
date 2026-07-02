@@ -43,7 +43,7 @@ echo "Enter Python module name:"
 read -r MODULE_NAME
 ```
 
-Uses `read -r` to prevent backslash interpretation. Prompts go to stdout so they are visible in interactive use, and the script also works when input is piped (e.g. `echo -e "name\nmodule" | ./scaffold.sh`) for scripted/test invocation.
+Uses `read -r` to prevent backslash interpretation. Prompts go to stdout so they are visible in interactive use, and the script also works when input is piped (e.g. `echo -e "name\nmodule" | ./new-sdd-project.sh`) for scripted/test invocation.
 
 ### 2. Input Validation
 
@@ -183,10 +183,10 @@ User Input ──▶ Variables (PROJECT_NAME, MODULE_NAME)
 
 ```bash
 # Interactive
-./scaffold.sh
+./new-sdd-project.sh
 
 # Piped (for testing)
-echo -e "my-project\nmy_module" | ./scaffold.sh
+echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 ```
 
 ## Design Decisions & Trade-offs

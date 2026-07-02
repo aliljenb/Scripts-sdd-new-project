@@ -6,7 +6,7 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 
 ## Glossary
 
-- **Script**: The Bash shell script that performs the scaffolding operation
+- **Script**: The Bash shell script, named `new-sdd-project.sh`, that performs the scaffolding operation
 - **Project_Root**: The top-level directory created by the Script, named after the user-provided project name
 - **Python_Package**: A directory within `src/` containing an `__init__.py` file, named after the user-provided module name
 - **Spec_Templates**: Markdown template files (`requirements.md`, `design.md`, `tasks.md`) placed in the `specs/` directory following Kiro-style conventions
@@ -92,6 +92,7 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 1. THE Script SHALL use `/bin/bash` as the interpreter via a shebang line
 2. THE Script SHALL use only commands available in a default macOS installation (`mkdir`, `cat`, `echo`, `read`)
 3. THE Script SHALL be executable as a single file without requiring installation of additional tools
+4. THE Script SHALL be named `new-sdd-project.sh`
 
 ### Requirement 8: Completion feedback
 

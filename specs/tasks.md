@@ -68,3 +68,11 @@
 
 - [x] 10.1 Run the script interactively end-to-end and confirm the generated project tree matches the design's file manifest
 - [x] 10.2 Run the script via piped input (`echo -e "name\nmodule" | ./scaffold.sh`) and confirm identical results
+
+## Task 11: Rename script to `new-sdd-project.sh`
+
+- [x] 11.1 Rename `scaffold.sh` to `new-sdd-project.sh` (`git mv scaffold.sh new-sdd-project.sh`), preserving the executable bit
+- [x] 11.2 Update `tests/test_scaffold.sh`: change the `SCAFFOLD` path variable and all assertion messages/comments from `scaffold.sh` to `new-sdd-project.sh`
+- [x] 11.3 Update `tests/test_properties.sh`: change the `SCAFFOLD` path variable and header comment from `scaffold.sh` to `new-sdd-project.sh`
+- [x] 11.4 Update `.claude/settings.local.json` permission entries referencing the script path, if any point at the old filename
+- [x] 11.5 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions still pass against the renamed script

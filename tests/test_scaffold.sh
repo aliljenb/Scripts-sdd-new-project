@@ -1,11 +1,11 @@
 #!/bin/bash
-# Lightweight test harness for scaffold.sh (no external test framework required).
+# Lightweight test harness for new-sdd-project.sh (no external test framework required).
 # Extended as each task in specs/tasks.md is implemented.
 
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCAFFOLD="$SCRIPT_DIR/scaffold.sh"
+SCAFFOLD="$SCRIPT_DIR/new-sdd-project.sh"
 FAILURES=0
 
 assert() {
@@ -21,9 +21,9 @@ assert() {
 
 # --- Task 1: shebang and input prompting ---
 
-assert "scaffold.sh exists" "[ -f '$SCAFFOLD' ]"
-assert "scaffold.sh is executable" "[ -x '$SCAFFOLD' ]"
-assert "scaffold.sh has a bash shebang" "head -n1 '$SCAFFOLD' | grep -q '^#!/bin/bash$'"
+assert "new-sdd-project.sh exists" "[ -f '$SCAFFOLD' ]"
+assert "new-sdd-project.sh is executable" "[ -x '$SCAFFOLD' ]"
+assert "new-sdd-project.sh has a bash shebang" "head -n1 '$SCAFFOLD' | grep -q '^#!/bin/bash$'"
 
 WORKDIR=$(mktemp -d)
 trap 'rm -rf "$WORKDIR"' EXIT
@@ -40,9 +40,9 @@ run_in_workdir() {
 
 run_in_workdir $'demo-project\ndemo_module\n'; STATUS=$?
 
-assert "scaffold.sh exits 0 given valid piped input" "[ $STATUS -eq 0 ]"
-assert "scaffold.sh prompts for project name" "echo \"\$OUTPUT\" | grep -q 'Enter project name:'"
-assert "scaffold.sh prompts for module name" "echo \"\$OUTPUT\" | grep -q 'Enter Python module name:'"
+assert "new-sdd-project.sh exits 0 given valid piped input" "[ $STATUS -eq 0 ]"
+assert "new-sdd-project.sh prompts for project name" "echo \"\$OUTPUT\" | grep -q 'Enter project name:'"
+assert "new-sdd-project.sh prompts for module name" "echo \"\$OUTPUT\" | grep -q 'Enter Python module name:'"
 
 # --- Task 2: input validation ---
 
