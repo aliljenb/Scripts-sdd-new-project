@@ -67,6 +67,7 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 3. WHEN the `specs/` directory is created, THE Script SHALL create a `design.md` template file inside `specs/`
 4. WHEN the `specs/` directory is created, THE Script SHALL create a `tasks.md` template file inside `specs/`
 5. EACH Spec_Template SHALL contain a heading and a placeholder comment describing its purpose
+6. WHEN the `design.md` template is created, THE Script SHALL include in its content a design note stating that all Python code, except test files, SHALL reside inside the Python_Package directory under `src/`, so that every project scaffolded by the Script starts with this source-layout constraint already documented for its own future development
 
 ### Requirement 5: Claude CLI SDD commands
 

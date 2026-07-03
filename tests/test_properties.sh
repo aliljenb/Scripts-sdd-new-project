@@ -1,5 +1,5 @@
 #!/bin/bash
-# Property-based tests for new-sdd-project.sh, mapped to the 12 correctness
+# Property-based tests for new-sdd-project.sh, mapped to the 13 correctness
 # properties defined in specs/design.md. Each property is checked against
 # a batch of randomly generated inputs rather than a single fixed example.
 
@@ -224,6 +224,17 @@ for ((i = 0; i < ITERATIONS; i++)); do
     assert "Property 10: $proj pyproject.toml registers smoke marker" "grep -q 'smoke: marks a test as a smoke test' '$pyproject'"
 done
 echo "Property 10 (project manifest completeness): done"
+
+# --- Property 13: design.md template source-layout note ---
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p13-$(random_valid_project_name)-$i"
+    mod=$(random_valid_module_name)
+    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
+    design_md="$WORKDIR/$proj/specs/design.md"
+    assert "Property 13: $proj design.md has Source Layout Constraint heading" "grep -q '^## Source Layout Constraint$' '$design_md'"
+    assert "Property 13: $proj design.md note references src/$mod/" "grep -q \"src/$mod/\" '$design_md'"
+done
+echo "Property 13 (design.md template source-layout note): done"
 
 # --- Property 11: Git repository initialization completeness ---
 GIT_IDENTITY_OK=0

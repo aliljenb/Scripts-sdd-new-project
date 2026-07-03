@@ -116,7 +116,7 @@ All files are written using `cat` with heredocs. The content is deterministic gi
 | `tests/test_{MODULE_NAME}.py` | Placeholder pytest test module: imports `pytest`, one trivially-passing test function decorated with `@pytest.mark.smoke` |
 | `pyproject.toml` | Declares `pytest` as a dev dependency; registers the `smoke` pytest marker |
 | `specs/requirements.md` | Markdown template with heading and placeholder |
-| `specs/design.md` | Markdown template with heading and placeholder |
+| `specs/design.md` | Markdown template with heading, placeholder, and a source-layout design note |
 | `specs/tasks.md` | Markdown template with heading and placeholder |
 | `.claude/commands/spec-requirements.md` | Slash command for requirements generation |
 | `.claude/commands/spec-design.md` | Slash command for design generation |
@@ -124,6 +124,20 @@ All files are written using `cat` with heredocs. The content is deterministic gi
 | `.claude/commands/implement-task.md` | Slash command for task implementation |
 | `.claude/commands/review.md` | Slash command for code review |
 | `.gitignore` | Python + macOS ignore patterns |
+
+#### specs/design.md Template Content
+
+```markdown
+# Design
+
+<!-- Define your project design here -->
+
+## Source Layout Constraint
+
+All Python code, except test files, SHALL reside inside `src/$MODULE_NAME/`. Test code belongs in `tests/`.
+```
+
+Unlike `specs/requirements.md` and `specs/tasks.md` (which stay pure placeholders per Requirement 4.5), the `design.md` template additionally embeds a `## Source Layout Constraint` note with `$MODULE_NAME` substituted to the actual Python_Package name (Requirement 4.6). This requires the heredoc to be unquoted (`<< EOF`, not `<< 'EOF'`) so the shell interpolates `$MODULE_NAME`, the same technique already used for `pyproject.toml`'s `$PROJECT_NAME` substitution. The note seeds every scaffolded project with this source-layout rule already documented in its own design doc, so a downstream developer (or Claude, when driving `/spec-design` in that project) sees the constraint before writing any code, rather than needing to rediscover or re-invent it.
 
 #### Placeholder Test Content
 
@@ -292,6 +306,7 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 - **Top-level `tests/` vs. nested under `src/{MODULE_NAME}/tests/`**: Tests are placed at `{PROJECT_NAME}/tests/`, matching the `src/` sibling convention common in modern Python packaging (e.g. `setuptools`/`hatch` src-layouts), rather than nesting them inside the package directory.
 - **`pyproject.toml` over `requirements-dev.txt`**: The dev dependency is declared in `pyproject.toml`'s `[project.optional-dependencies]` rather than a separate `requirements-dev.txt`, keeping a single manifest file and aligning with modern (PEP 621) Python packaging conventions rather than the older pip-specific requirements-file convention.
 - **Custom `smoke` marker over a built-in pytest marker**: The placeholder test uses a project-defined `@pytest.mark.smoke` marker (registered in `pyproject.toml`) rather than a built-in marker like `@pytest.mark.skip`, since built-in markers like `skip`/`xfail` would make the test not actually pass/run. Registering the custom marker in `[tool.pytest.ini_options]` avoids `PytestUnknownMarkWarning`.
+- **Source-layout constraint documented in `design.md`, not enforced by the Script**: Requirement 4.6 seeds the generated `design.md` template with a note that Python code (except tests) belongs under `src/$MODULE_NAME/`. The Script does not itself enforce this on the downstream project's future code — it only ensures the constraint is documented from day one, on the theory that a scaffolding tool should hand off a documented convention rather than police code the downstream developer (or Claude) hasn't written yet.
 
 ## Constraints
 
@@ -376,3 +391,9 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 *For any* valid input pair, when `git` is not available on `PATH`, the script SHALL still create the complete file structure (satisfying Property 2), SHALL print a warning message to stdout, SHALL exit with status code 0, and SHALL NOT create a `.git/` directory inside Project_Root.
 
 **Validates: Requirements 9.6, 9.7**
+
+### Property 13: design.md template source-layout note
+
+*For any* valid input pair, the generated `specs/design.md` file SHALL contain a `## Source Layout Constraint` heading, and its body SHALL state that Python code other than test files resides inside `src/{module_name}/`, with `{module_name}` substituted to the actual Python_Package value for that run.
+
+**Validates: Requirement 4.6**

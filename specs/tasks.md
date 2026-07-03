@@ -165,3 +165,15 @@
 
 - [x] 26.1 Run the script interactively end-to-end with `git` available; confirm `git log -1 --pretty=%s` prints `Create initial project` and the printed directory structure contains no `.git` entries
 - [x] 26.2 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass with the updated commit message and tree output
+
+## Task 27: Seed source-layout note into the generated design.md template
+
+- [x] 27.1 In `new-sdd-project.sh`, change the `cat > "$PROJECT_NAME/specs/design.md"` heredoc delimiter from quoted (`<< 'EOF'`) to unquoted (`<< EOF`) so `$MODULE_NAME` is interpolated, and append a `## Source Layout Constraint` section stating "All Python code, except test files, SHALL reside inside `src/$MODULE_NAME/`. Test code belongs in `tests/`.", per `specs/design.md`'s `specs/design.md` Template Content
+- [x] 27.2 Add `tests/test_scaffold.sh` assertions: the generated `specs/design.md` contains the `## Source Layout Constraint` heading, and its body references the actual module name substituted (e.g. `src/tree_module/`)
+- [x] 27.3 Write property test: design.md template source-layout note (Property 13)
+  - **Feature: sdd-project-scaffold, Property 13: For any valid input pair, the generated `specs/design.md` contains a `## Source Layout Constraint` heading and states that Python code other than test files resides inside `src/{module_name}/`, with `{module_name}` substituted to the actual Python_Package value**
+
+## Task 28: Manual verification — design.md source-layout note
+
+- [x] 28.1 Run the script interactively end-to-end; open the generated `specs/design.md` and confirm the `## Source Layout Constraint` section is present with the correct module name substituted (not a literal `$MODULE_NAME`)
+- [x] 28.2 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 13 test

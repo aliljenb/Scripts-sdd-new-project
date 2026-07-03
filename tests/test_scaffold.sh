@@ -119,6 +119,12 @@ assert "specs/requirements.md has a heading" "grep -q '^# Requirements$' '$WORKD
 assert "specs/design.md has a heading" "grep -q '^# Design$' '$WORKDIR/tree-project/specs/design.md'"
 assert "specs/tasks.md has a heading" "grep -q '^# Tasks$' '$WORKDIR/tree-project/specs/tasks.md'"
 
+# --- Task 27: design.md template source-layout note ---
+
+DESIGN_MD="$WORKDIR/tree-project/specs/design.md"
+assert "specs/design.md has Source Layout Constraint heading" "grep -q '^## Source Layout Constraint$' '$DESIGN_MD'"
+assert "specs/design.md source-layout note references src/tree_module/" "grep -q 'src/tree_module/' '$DESIGN_MD'"
+
 # --- Task 6: Claude CLI slash command file generation ---
 
 CMD_DIR="$WORKDIR/tree-project/.claude/commands"

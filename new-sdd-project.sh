@@ -79,10 +79,14 @@ cat > "$PROJECT_NAME/specs/requirements.md" << 'EOF'
 <!-- Define your project requirements here -->
 EOF
 
-cat > "$PROJECT_NAME/specs/design.md" << 'EOF'
+cat > "$PROJECT_NAME/specs/design.md" << EOF
 # Design
 
 <!-- Define your project design here -->
+
+## Source Layout Constraint
+
+All Python code, except test files, SHALL reside inside \`src/$MODULE_NAME/\`. Test code belongs in \`tests/\`.
 EOF
 
 cat > "$PROJECT_NAME/specs/tasks.md" << 'EOF'
