@@ -81,6 +81,31 @@ assert "creates src/{module}/ directory" "[ -d '$WORKDIR/tree-project/src/tree_m
 assert "creates specs/ directory" "[ -d '$WORKDIR/tree-project/specs' ]"
 assert "creates .claude/commands/ directory" "[ -d '$WORKDIR/tree-project/.claude/commands' ]"
 
+# --- Task 13: tests/ directory creation ---
+
+assert "creates tests/ directory" "[ -d '$WORKDIR/tree-project/tests' ]"
+
+# --- Task 14: tests package file generation ---
+
+assert "creates tests/__init__.py" "[ -f '$WORKDIR/tree-project/tests/__init__.py' ]"
+assert "creates tests/test_{module}.py" "[ -f '$WORKDIR/tree-project/tests/test_tree_module.py' ]"
+assert "tests/test_{module}.py defines a test_ function" "grep -q '^def test_' '$WORKDIR/tree-project/tests/test_tree_module.py'"
+assert "tests/test_{module}.py does not import the package" "! grep -q 'tree_module' '$WORKDIR/tree-project/tests/test_tree_module.py'"
+
+# --- Task 17: placeholder test uses the pytest library ---
+
+assert "tests/test_{module}.py imports pytest" "grep -q '^import pytest$' '$WORKDIR/tree-project/tests/test_tree_module.py'"
+assert "tests/test_{module}.py decorates test with @pytest.mark.smoke" "grep -q '^@pytest.mark.smoke$' '$WORKDIR/tree-project/tests/test_tree_module.py'"
+
+# --- Task 18: pyproject.toml generation ---
+
+PYPROJECT="$WORKDIR/tree-project/pyproject.toml"
+
+assert "creates pyproject.toml" "[ -f '$PYPROJECT' ]"
+assert "pyproject.toml declares project name" "grep -q 'name = \"tree-project\"' '$PYPROJECT'"
+assert "pyproject.toml declares pytest as a dev dependency" "grep -q 'dev = \[\"pytest\"\]' '$PYPROJECT'"
+assert "pyproject.toml registers the smoke marker" "grep -q 'smoke: marks a test as a smoke test' '$PYPROJECT'"
+
 # --- Task 4: Python package __init__.py ---
 
 assert "creates src/{module}/__init__.py" "[ -f '$WORKDIR/tree-project/src/tree_module/__init__.py' ]"

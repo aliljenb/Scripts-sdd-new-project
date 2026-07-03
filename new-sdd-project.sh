@@ -36,11 +36,42 @@ if [ -e "$PROJECT_NAME" ]; then
     exit 1
 fi
 
+# Directory tree created:
+#   {PROJECT_NAME}/
+#   ├── src/{MODULE_NAME}/
+#   ├── tests/
+#   ├── specs/
+#   └── .claude/commands/
 mkdir -p "$PROJECT_NAME/src/$MODULE_NAME"
+mkdir -p "$PROJECT_NAME/tests"
 mkdir -p "$PROJECT_NAME/specs"
 mkdir -p "$PROJECT_NAME/.claude/commands"
 
 touch "$PROJECT_NAME/src/$MODULE_NAME/__init__.py"
+touch "$PROJECT_NAME/tests/__init__.py"
+
+cat > "$PROJECT_NAME/tests/test_$MODULE_NAME.py" << 'EOF'
+import pytest
+
+
+@pytest.mark.smoke
+def test_placeholder():
+    assert True
+EOF
+
+cat > "$PROJECT_NAME/pyproject.toml" << EOF
+[project]
+name = "$PROJECT_NAME"
+version = "0.1.0"
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+markers = [
+    "smoke: marks a test as a smoke test",
+]
+EOF
 
 cat > "$PROJECT_NAME/specs/requirements.md" << 'EOF'
 # Requirements

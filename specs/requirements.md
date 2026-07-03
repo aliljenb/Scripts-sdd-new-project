@@ -2,13 +2,15 @@
 
 ## Introduction
 
-A Bash script for macOS that scaffolds a new spec-driven development (SDD) project for Python. The workflow is Kiro-style (requirements → design → tasks) but is driven by the Claude CLI instead of Kiro: the generated project includes a `.claude/commands/` directory with slash commands that implement the SDD lifecycle. The script interactively prompts for a project name and Python module name, then generates the source layout, spec templates, Claude commands, and a `.gitignore`.
+A Bash script for macOS that scaffolds a new spec-driven development (SDD) project for Python. The workflow is Kiro-style (requirements → design → tasks) but is driven by the Claude CLI instead of Kiro: the generated project includes a `.claude/commands/` directory with slash commands that implement the SDD lifecycle. The script interactively prompts for a project name and Python module name, then generates the source layout, a matching test package, spec templates, Claude commands, a `pyproject.toml`, and a `.gitignore`.
 
 ## Glossary
 
 - **Script**: The Bash shell script, named `new-sdd-project.sh`, that performs the scaffolding operation
 - **Project_Root**: The top-level directory created by the Script, named after the user-provided project name
 - **Python_Package**: A directory within `src/` containing an `__init__.py` file, named after the user-provided module name
+- **Test_Package**: A `tests/` directory at the Project_Root level, containing an `__init__.py` file and a placeholder `test_<Python_Package>.py` file that imports pytest and is decorated with the `@pytest.mark.smoke` marker
+- **Project_Manifest**: A `pyproject.toml` file at the Project_Root level that declares `pytest` as a development dependency and registers the `smoke` pytest marker
 - **Spec_Templates**: Markdown template files (`requirements.md`, `design.md`, `tasks.md`) placed in the `specs/` directory following Kiro-style conventions
 - **Claude_Commands**: Markdown files placed in `.claude/commands/` that define Claude CLI slash commands for the SDD lifecycle (`spec-requirements`, `spec-design`, `spec-tasks`, `implement-task`, `review`)
 
@@ -39,7 +41,7 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 
 ### Requirement 3: Python source layout
 
-**User Story:** As a developer, I want the script to create a standard Python source layout, so that my project follows best practices from the start.
+**User Story:** As a developer, I want the script to create a standard Python source layout with a matching unit test structure, so that my project follows best practices from the start and is ready for test-driven development.
 
 #### Acceptance Criteria
 
@@ -47,6 +49,12 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 2. WHEN the Project_Root is created, THE Script SHALL create a `src/` directory inside the Project_Root
 3. WHEN the `src/` directory is created, THE Script SHALL create the Python_Package directory inside `src/`
 4. WHEN the Python_Package directory is created, THE Script SHALL create an `__init__.py` file inside the Python_Package directory
+5. WHEN the Project_Root is created, THE Script SHALL create a `tests/` directory inside the Project_Root, alongside `src/`
+6. WHEN the `tests/` directory is created, THE Script SHALL create an `__init__.py` file inside the `tests/` directory, making it a Python package
+7. WHEN the `tests/` directory is created, THE Script SHALL create a placeholder `test_<Python_Package>.py` file inside `tests/`, named using the Python_Package value, containing a minimal trivially-passing test function that uses the pytest library
+8. WHEN the placeholder test function is created, THE Script SHALL include an `import pytest` statement in `test_<Python_Package>.py` and decorate the test function with a pytest marker (`@pytest.mark.smoke`)
+9. WHEN the Project_Root is created, THE Script SHALL create a `pyproject.toml` file inside the Project_Root that declares `pytest` as a development dependency
+10. WHEN `pyproject.toml` is created, THE Script SHALL register the `smoke` marker in `pyproject.toml` so that pytest does not emit an unknown-marker warning when the placeholder test runs
 
 ### Requirement 4: Kiro-style spec templates
 

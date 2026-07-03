@@ -84,3 +84,48 @@
 - [x] 12.3 Write property test: spec-requirements.md control-question gate content (Property 8)
   - **Feature: sdd-project-scaffold, Property 8: For any valid input pair, the generated `.claude/commands/spec-requirements.md` contains the `## Before writing or editing anything` heading and its required instructions (ask-before-drafting on ambiguity, one question/small batch at a time, 2-4 mutually exclusive options plus "Other", `AskUserQuestion` tool with A/B/C/D fallback, withhold edits until resolved)**
 - [x] 12.4 Run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 8 test
+
+## Task 13: Implement directory creation — tests package
+
+- [x] 13.1 In `new-sdd-project.sh`, add `mkdir -p "$PROJECT_NAME/tests"` to the Create Dirs stage, alongside the existing `src/`, `specs/`, and `.claude/commands/` calls
+- [x] 13.2 Update the directory-tree comment/documentation in the script to list `tests/` alongside `src/{MODULE_NAME}/`
+
+## Task 14: Implement file generation — tests package
+
+- [x] 14.1 Create empty `tests/__init__.py`
+- [x] 14.2 Write placeholder `tests/test_{MODULE_NAME}.py` containing a single trivially-passing test function (`def test_placeholder():\n    assert True`), with no import of the Python_Package, per `specs/design.md`
+
+## Task 15: Write property-based tests — test package
+
+- [x] 15.1 Update the Property 2 test (Complete directory structure invariant) to also assert the existence of `tests/__init__.py` and `tests/test_{MODULE_NAME}.py`
+- [x] 15.2 Write property test: Test package validity (Property 9)
+  - **Feature: sdd-project-scaffold, Property 9: For any valid input pair, `tests/__init__.py` exists, `tests/test_{module_name}.py` exists and defines at least one `test_`-prefixed function, and running `pytest` from within the Project_Root exits with status 0**
+
+## Task 16: Manual verification — test package
+
+- [x] 16.1 Run the script interactively end-to-end, `cd` into the generated project, run `pytest`, and confirm it exits 0
+- [x] 16.2 Confirm the generated directory tree (via the script's own success-report output) includes `tests/__init__.py` and `tests/test_{MODULE_NAME}.py`, matching the updated design's file manifest
+- [x] 16.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 9 test
+
+## Task 17: Update placeholder test to use the pytest library
+
+- [x] 17.1 In `new-sdd-project.sh`, update the `tests/test_$MODULE_NAME.py` heredoc to add an `import pytest` statement and decorate `test_placeholder` with `@pytest.mark.smoke`, per the updated `specs/design.md` placeholder test content
+- [x] 17.2 Update `tests/test_scaffold.sh` assertions for `tests/test_{module}.py` to check for the `import pytest` statement and the `@pytest.mark.smoke` decorator, in addition to the existing `test_`-function check
+
+## Task 18: Implement file generation — pyproject.toml
+
+- [x] 18.1 In `new-sdd-project.sh`, add a `cat > "$PROJECT_NAME/pyproject.toml"` heredoc writing `[project]` (`name`/`version`), `[project.optional-dependencies]` with `dev = ["pytest"]`, and `[tool.pytest.ini_options]` registering the `smoke` marker, per `specs/design.md`
+- [x] 18.2 Add `tests/test_scaffold.sh` assertions: `pyproject.toml` exists, declares `pytest` under the dev dependency group, and registers the `smoke` marker under `[tool.pytest.ini_options]`
+
+## Task 19: Write property-based tests — project manifest & updated test package
+
+- [x] 19.1 Update the Property 2 test (Complete directory structure invariant) to also assert the existence of `pyproject.toml`
+- [x] 19.2 Update the Property 9 test (Test package validity) to also assert the `import pytest` statement and `@pytest.mark.smoke` decorator are present in `tests/test_{module_name}.py`
+- [x] 19.3 Write property test: Project manifest completeness (Property 10)
+  - **Feature: sdd-project-scaffold, Property 10: For any valid input pair, the generated `pyproject.toml` exists at Project_Root, declares `pytest` as a dependency under `[project.optional-dependencies].dev`, and registers the `smoke` marker under `[tool.pytest.ini_options].markers`**
+
+## Task 20: Manual verification — pytest library usage & project manifest
+
+- [x] 20.1 Run the script interactively end-to-end, `cd` into the generated project, run `pytest -q`, and confirm it exits 0 with no `PytestUnknownMarkWarning` in the output
+- [x] 20.2 Confirm the generated `pyproject.toml` content matches the design (`[project]`, `[project.optional-dependencies].dev = ["pytest"]`, `[tool.pytest.ini_options].markers` registering `smoke`)
+- [x] 20.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 10 test
