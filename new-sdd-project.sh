@@ -188,7 +188,7 @@ EOF
 
 GIT_INITIALIZED=0
 if command -v git >/dev/null 2>&1; then
-    if (cd "$PROJECT_NAME" && git init -q && git add -A && git commit -q -m "Initial project creation") >/dev/null 2>&1; then
+    if (cd "$PROJECT_NAME" && git init -q && git add -A && git commit -q -m "Create initial project") >/dev/null 2>&1; then
         GIT_INITIALIZED=1
     else
         echo "Warning: git initialization or commit failed; skipping repository setup."
@@ -201,4 +201,4 @@ echo ""
 echo "Project '$PROJECT_NAME' created successfully!"
 echo ""
 echo "Directory structure:"
-find "$PROJECT_NAME" -print | sed -e "s;[^/]*/;  ;g;s;  \([^ ]\);├─ \1;"
+find "$PROJECT_NAME" -path "$PROJECT_NAME/.git" -prune -o -print | sed -e "s;[^/]*/;  ;g;s;  \([^ ]\);├─ \1;"

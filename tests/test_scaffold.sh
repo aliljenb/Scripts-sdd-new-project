@@ -150,7 +150,7 @@ if command -v git >/dev/null 2>&1; then
     GIT_PROJECT="$WORKDIR/tree-project"
     assert "creates .git/ directory" "[ -d '$GIT_PROJECT/.git' ]"
     assert "exactly one commit exists" "[ \"\$(cd '$GIT_PROJECT' && git log --oneline | wc -l | tr -d ' ')\" = '1' ]"
-    assert "commit message is 'Initial project creation'" "(cd '$GIT_PROJECT' && git log -1 --pretty=%s) | grep -q '^Initial project creation$'"
+    assert "commit message is 'Create initial project'" "(cd '$GIT_PROJECT' && git log -1 --pretty=%s) | grep -q '^Create initial project$'"
     assert "working tree is clean after commit" "[ -z \"\$(cd '$GIT_PROJECT' && git status --porcelain)\" ]"
 else
     echo "SKIPPED: git init assertions (git not found on PATH)"
@@ -163,6 +163,14 @@ assert "success report exits 0" "[ $STATUS -eq 0 ]"
 assert "success message printed" "echo \"\$OUTPUT\" | grep -q \"Project 'report-project' created successfully\""
 assert "directory structure listed (project root)" "echo \"\$OUTPUT\" | grep -q 'report-project'"
 assert "directory structure listed (module dir)" "echo \"\$OUTPUT\" | grep -q 'report_module'"
+
+# --- Task 25: .git/ excluded from directory structure output ---
+
+if command -v git >/dev/null 2>&1; then
+    assert "directory structure excludes .git" "! echo \"\$OUTPUT\" | grep -qE '\.git(\$|[^a-zA-Z])'"
+else
+    echo "SKIPPED: .git exclusion assertion (git not found on PATH)"
+fi
 
 echo ""
 if [ "$FAILURES" -eq 0 ]; then

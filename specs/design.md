@@ -212,7 +212,7 @@ This content is static (no variable substitution) and identical across every gen
 ```bash
 GIT_INITIALIZED=0
 if command -v git >/dev/null 2>&1; then
-    if (cd "$PROJECT_NAME" && git init -q && git add -A && git commit -q -m "Initial project creation") >/dev/null 2>&1; then
+    if (cd "$PROJECT_NAME" && git init -q && git add -A && git commit -q -m "Create initial project") >/dev/null 2>&1; then
         GIT_INITIALIZED=1
     else
         echo "Warning: git initialization or commit failed; skipping repository setup."
@@ -237,10 +237,10 @@ echo ""
 echo "Project '$PROJECT_NAME' created successfully!"
 echo ""
 echo "Directory structure:"
-find "$PROJECT_NAME" -print | sed -e "s;[^/]*/;  ;g;s;  \([^ ]\);├─ \1;"
+find "$PROJECT_NAME" -path "$PROJECT_NAME/.git" -prune -o -print | sed -e "s;[^/]*/;  ;g;s;  \([^ ]\);├─ \1;"
 ```
 
-The directory structure display uses commands available on default macOS (`find`, `sed`) to render a tree without requiring the `tree` package. The success message and tree are printed regardless of whether Git Init succeeded, since Requirement 9.6/9.7 require the script to still report overall success in that case; any git warning was already printed during the Git Init stage, immediately above this output.
+The directory structure display uses commands available on default macOS (`find`, `sed`) to render a tree without requiring the `tree` package. The `-path "$PROJECT_NAME/.git" -prune -o -print` pair excludes `.git/` and everything beneath it from the listing (Requirement 8.2) — `-prune` stops `find` from descending into `.git/` and, because it short-circuits the `-o`, also suppresses printing the `.git/` entry itself, while every other entry still reaches `-print` unaffected. This keeps the tree output focused on the generated project content and stable regardless of git internals (object hashes, pack files, etc.), which would otherwise make the tree output non-deterministic across runs. The success message and tree are printed regardless of whether Git Init succeeded, since Requirement 9.6/9.7 require the script to still report overall success in that case; any git warning was already printed during the Git Init stage, immediately above this output.
 
 ## Data Flow
 
@@ -268,7 +268,7 @@ User Input ──▶ Variables (PROJECT_NAME, MODULE_NAME)
 ### Outputs
 - **stdout**: Prompts, success message, directory tree (on success); error messages (on validation failure); a git warning message (on git unavailability/failure)
 - **Exit code**: 0 on success (including when Git Init fails or is skipped), non-zero on validation failure
-- **Filesystem**: Complete project directory tree at `./{PROJECT_NAME}/`; if `git` is available and succeeds, `./{PROJECT_NAME}/` is also a git repository containing a single commit ("Initial project creation") with all generated files tracked and a clean working tree
+- **Filesystem**: Complete project directory tree at `./{PROJECT_NAME}/`; if `git` is available and succeeds, `./{PROJECT_NAME}/` is also a git repository containing a single commit ("Create initial project") with all generated files tracked and a clean working tree
 
 ### Usage
 
@@ -343,7 +343,7 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 
 ### Property 7: Success output contains structure
 
-*For any* valid input pair, the script's stdout SHALL contain a success message and references to the created directory paths.
+*For any* valid input pair, the script's stdout SHALL contain a success message and references to the created directory paths, and SHALL NOT contain any `.git` path reference in the displayed directory structure.
 
 **Validates: Requirements 8.1, 8.2**
 
@@ -367,7 +367,7 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 
 ### Property 11: Git repository initialization completeness
 
-*For any* valid input pair, when `git` is available on `PATH` and a global git identity is configured, the script SHALL create a `.git/` directory inside Project_Root, `git log` inside Project_Root SHALL show exactly one commit whose message is `Initial project creation`, that commit SHALL include every path required by Property 2, and `git status --porcelain` inside Project_Root SHALL report a clean working tree afterward.
+*For any* valid input pair, when `git` is available on `PATH` and a global git identity is configured, the script SHALL create a `.git/` directory inside Project_Root, `git log` inside Project_Root SHALL show exactly one commit whose message is `Create initial project`, that commit SHALL include every path required by Property 2, and `git status --porcelain` inside Project_Root SHALL report a clean working tree afterward.
 
 **Validates: Requirements 9.1, 9.2, 9.3, 9.4**
 

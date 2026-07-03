@@ -170,6 +170,9 @@ for ((i = 0; i < ITERATIONS; i++)); do
     assert "Property 7: stdout contains success message for '$proj'" "echo \"\$OUTPUT\" | grep -q \"Project '$proj' created successfully\""
     assert "Property 7: stdout references '$proj' path" "echo \"\$OUTPUT\" | grep -q '$proj'"
     assert "Property 7: stdout references '$mod' path" "echo \"\$OUTPUT\" | grep -q '$mod'"
+    if command -v git >/dev/null 2>&1; then
+        assert "Property 7: stdout for '$proj' excludes .git" "! echo \"\$OUTPUT\" | grep -qE '\.git(\$|[^a-zA-Z])'"
+    fi
 done
 echo "Property 7 (success output contains structure): done"
 
@@ -240,7 +243,7 @@ if [ "$GIT_IDENTITY_OK" = "1" ]; then
         root="$WORKDIR/$proj"
         assert "Property 11: $proj .git/ exists" "[ -d '$root/.git' ]"
         assert "Property 11: $proj exactly one commit" "[ \"\$(cd '$root' && git log --oneline | wc -l | tr -d ' ')\" = '1' ]"
-        assert "Property 11: $proj commit message correct" "(cd '$root' && git log -1 --pretty=%s) | grep -q '^Initial project creation$'"
+        assert "Property 11: $proj commit message correct" "(cd '$root' && git log -1 --pretty=%s) | grep -q '^Create initial project$'"
         assert "Property 11: $proj working tree clean" "[ -z \"\$(cd '$root' && git status --porcelain)\" ]"
         tracked_files=$(cd "$root" && git ls-tree -r --name-only HEAD)
         required_tracked_paths=(
