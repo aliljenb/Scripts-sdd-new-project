@@ -144,6 +144,18 @@ for pattern in '__pycache__/' '\*\.py\[cod\]' '\.eggs/' '\*\.egg-info/' 'dist/' 
     assert ".gitignore contains $pattern" "grep -q -- '$pattern' '$GITIGNORE'"
 done
 
+# --- Task 21: git init stage ---
+
+if command -v git >/dev/null 2>&1; then
+    GIT_PROJECT="$WORKDIR/tree-project"
+    assert "creates .git/ directory" "[ -d '$GIT_PROJECT/.git' ]"
+    assert "exactly one commit exists" "[ \"\$(cd '$GIT_PROJECT' && git log --oneline | wc -l | tr -d ' ')\" = '1' ]"
+    assert "commit message is 'Initial project creation'" "(cd '$GIT_PROJECT' && git log -1 --pretty=%s) | grep -q '^Initial project creation$'"
+    assert "working tree is clean after commit" "[ -z \"\$(cd '$GIT_PROJECT' && git status --porcelain)\" ]"
+else
+    echo "SKIPPED: git init assertions (git not found on PATH)"
+fi
+
 # --- Task 8: success reporting ---
 
 run_in_workdir $'report-project\nreport_module\n'; STATUS=$?

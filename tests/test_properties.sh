@@ -1,5 +1,5 @@
 #!/bin/bash
-# Property-based tests for new-sdd-project.sh, mapped to the 10 correctness
+# Property-based tests for new-sdd-project.sh, mapped to the 12 correctness
 # properties defined in specs/design.md. Each property is checked against
 # a batch of randomly generated inputs rather than a single fixed example.
 
@@ -221,6 +221,77 @@ for ((i = 0; i < ITERATIONS; i++)); do
     assert "Property 10: $proj pyproject.toml registers smoke marker" "grep -q 'smoke: marks a test as a smoke test' '$pyproject'"
 done
 echo "Property 10 (project manifest completeness): done"
+
+# --- Property 11: Git repository initialization completeness ---
+GIT_IDENTITY_OK=0
+if command -v git >/dev/null 2>&1; then
+    ID_CHECK_DIR=$(mktemp -d)
+    if (cd "$ID_CHECK_DIR" && git init -q && touch f && git add f && git commit -q -m "identity check") >/dev/null 2>&1; then
+        GIT_IDENTITY_OK=1
+    fi
+    rm -rf "$ID_CHECK_DIR"
+fi
+
+if [ "$GIT_IDENTITY_OK" = "1" ]; then
+    for ((i = 0; i < ITERATIONS; i++)); do
+        proj="p11-$(random_valid_project_name)-$i"
+        mod=$(random_valid_module_name)
+        run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
+        root="$WORKDIR/$proj"
+        assert "Property 11: $proj .git/ exists" "[ -d '$root/.git' ]"
+        assert "Property 11: $proj exactly one commit" "[ \"\$(cd '$root' && git log --oneline | wc -l | tr -d ' ')\" = '1' ]"
+        assert "Property 11: $proj commit message correct" "(cd '$root' && git log -1 --pretty=%s) | grep -q '^Initial project creation$'"
+        assert "Property 11: $proj working tree clean" "[ -z \"\$(cd '$root' && git status --porcelain)\" ]"
+        tracked_files=$(cd "$root" && git ls-tree -r --name-only HEAD)
+        required_tracked_paths=(
+            "src/$mod/__init__.py"
+            "tests/__init__.py"
+            "tests/test_$mod.py"
+            "pyproject.toml"
+            "specs/requirements.md"
+            "specs/design.md"
+            "specs/tasks.md"
+            ".claude/commands/spec-requirements.md"
+            ".claude/commands/spec-design.md"
+            ".claude/commands/spec-tasks.md"
+            ".claude/commands/implement-task.md"
+            ".claude/commands/review.md"
+            ".gitignore"
+        )
+        for p in "${required_tracked_paths[@]}"; do
+            assert "Property 11: $proj commit tracks $p" "echo \"\$tracked_files\" | grep -qx \"$p\""
+        done
+    done
+    echo "Property 11 (git repository initialization completeness): done"
+else
+    echo "Property 11 (git repository initialization completeness): SKIPPED (git unavailable or no identity configured)"
+fi
+
+# --- Property 12: Graceful degradation without git ---
+FAKE_BIN="$WORKDIR/.fake_bin_no_git"
+mkdir -p "$FAKE_BIN"
+for tool in mkdir touch cat find sed; do
+    tool_path=$(command -v "$tool" 2>/dev/null)
+    if [ -n "$tool_path" ]; then
+        ln -sf "$tool_path" "$FAKE_BIN/$tool"
+    fi
+done
+
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p12-$(random_valid_project_name)-$i"
+    mod=$(random_valid_module_name)
+    capture="$WORKDIR/.scaffold_out_p12"
+    (cd "$WORKDIR" && printf '%s' "$proj"$'\n'"$mod"$'\n' | env PATH="$FAKE_BIN" "$SCAFFOLD" >"$capture" 2>&1)
+    STATUS=$?
+    OUTPUT=$(cat "$capture" 2>/dev/null)
+    rm -f "$capture"
+    root="$WORKDIR/$proj"
+    assert "Property 12: $proj exits 0 without git" "[ $STATUS -eq 0 ]"
+    assert "Property 12: $proj prints git warning" "echo \"\$OUTPUT\" | grep -qi 'git not found'"
+    assert "Property 12: $proj creates full file structure" "[ -f '$root/src/$mod/__init__.py' ] && [ -f '$root/pyproject.toml' ] && [ -f '$root/.gitignore' ]"
+    assert "Property 12: $proj creates no .git directory" "[ ! -d '$root/.git' ]"
+done
+echo "Property 12 (graceful degradation without git): done"
 
 echo ""
 if [ "$FAILURES" -eq 0 ]; then

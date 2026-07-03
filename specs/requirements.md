@@ -2,7 +2,7 @@
 
 ## Introduction
 
-A Bash script for macOS that scaffolds a new spec-driven development (SDD) project for Python. The workflow is Kiro-style (requirements → design → tasks) but is driven by the Claude CLI instead of Kiro: the generated project includes a `.claude/commands/` directory with slash commands that implement the SDD lifecycle. The script interactively prompts for a project name and Python module name, then generates the source layout, a matching test package, spec templates, Claude commands, a `pyproject.toml`, and a `.gitignore`.
+A Bash script for macOS that scaffolds a new spec-driven development (SDD) project for Python. The workflow is Kiro-style (requirements → design → tasks) but is driven by the Claude CLI instead of Kiro: the generated project includes a `.claude/commands/` directory with slash commands that implement the SDD lifecycle. The script interactively prompts for a project name and Python module name, then generates the source layout, a matching test package, spec templates, Claude commands, a `pyproject.toml`, and a `.gitignore`, before initializing a local git repository with an initial commit.
 
 ## Glossary
 
@@ -116,3 +116,17 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 
 1. WHEN all files and directories are created successfully, THE Script SHALL print a success message to standard output
 2. WHEN all files and directories are created successfully, THE Script SHALL display the created directory structure to standard output
+
+### Requirement 9: Version control initialization
+
+**User Story:** As a developer, I want the generated project committed to a fresh local git repository, so that I have a clean starting point for tracking changes from the very first file.
+
+#### Acceptance Criteria
+
+1. WHEN the file structure and content have been fully created, IF the `git` command is available, THEN THE Script SHALL initialize a git repository inside Project_Root
+2. WHEN the git repository is initialized, THE Script SHALL stage all created files in the repository
+3. WHEN all created files are staged, THE Script SHALL create a single commit with the message `Initial project creation`
+4. THE Script SHALL always run `git init` inside Project_Root, regardless of whether the current working directory is already inside another git repository
+5. THE Script SHALL rely on the user's existing global git configuration (`user.name`/`user.email`) for the commit author identity and SHALL NOT set or override git identity configuration
+6. IF the `git` command is not available on the system, THEN THE Script SHALL skip repository initialization and commit, display a warning message, and still exit with status code 0
+7. IF `git init`, `git add`, or `git commit` fails for any reason (e.g. missing git identity configuration), THEN THE Script SHALL display a warning message and still exit with status code 0, since the file structure was already created successfully
