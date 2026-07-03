@@ -84,6 +84,7 @@ All checks run before any `mkdir`/`cat` call, so validation failures never touch
 
 ```bash
 mkdir -p "$PROJECT_NAME/src/$MODULE_NAME"
+mkdir -p "$PROJECT_NAME/tests"
 mkdir -p "$PROJECT_NAME/specs"
 mkdir -p "$PROJECT_NAME/.claude/commands"
 ```
@@ -93,6 +94,7 @@ Uses `mkdir -p` to create the full tree in minimal calls. The directories create
 ```
 {PROJECT_NAME}/
 ├── src/{MODULE_NAME}/
+├── tests/
 ├── specs/
 └── .claude/commands/
 ```
@@ -106,6 +108,9 @@ All files are written using `cat` with heredocs. The content is deterministic gi
 | Path | Content Summary |
 |------|----------------|
 | `src/{MODULE_NAME}/__init__.py` | Empty file (Python package marker) |
+| `tests/__init__.py` | Empty file (Python package marker) |
+| `tests/test_{MODULE_NAME}.py` | Placeholder pytest test module: imports `pytest`, one trivially-passing test function decorated with `@pytest.mark.smoke` |
+| `pyproject.toml` | Declares `pytest` as a dev dependency; registers the `smoke` pytest marker |
 | `specs/requirements.md` | Markdown template with heading and placeholder |
 | `specs/design.md` | Markdown template with heading and placeholder |
 | `specs/tasks.md` | Markdown template with heading and placeholder |
@@ -115,6 +120,37 @@ All files are written using `cat` with heredocs. The content is deterministic gi
 | `.claude/commands/implement-task.md` | Slash command for task implementation |
 | `.claude/commands/review.md` | Slash command for code review |
 | `.gitignore` | Python + macOS ignore patterns |
+
+#### Placeholder Test Content
+
+```python
+import pytest
+
+
+@pytest.mark.smoke
+def test_placeholder():
+    assert True
+```
+
+The placeholder test imports `pytest` and decorates the test function with `@pytest.mark.smoke`, satisfying Requirement 3.7/3.8's "uses the pytest library" criterion. It still does not import the Python_Package itself. With a `src/` layout, importing the package from `tests/` requires either an editable install or additional `pyproject.toml`/`conftest.py` path configuration beyond dependency declaration, which is out of scope for this iteration (see Design Decisions). Omitting the package import keeps `pytest` runnable immediately after scaffolding, with zero extra configuration, while still proving the test discovery path (`tests/` as a package, `test_*.py` naming, a `test_*` function using a real pytest marker) is wired up correctly.
+
+#### pyproject.toml Content
+
+```toml
+[project]
+name = "{PROJECT_NAME}"
+version = "0.1.0"
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+markers = [
+    "smoke: marks a test as a smoke test",
+]
+```
+
+`{PROJECT_NAME}` is substituted verbatim, consistent with how the same value is interpolated elsewhere in the script (e.g. the success message) — no additional TOML-escaping is performed beyond the existing Requirement 2 path-safety checks. The `[project.optional-dependencies].dev` group declares `pytest` as a development dependency (Requirement 3.9). The `[tool.pytest.ini_options].markers` list registers `smoke` (Requirement 3.10) so pytest does not emit a `PytestUnknownMarkWarning` when the placeholder test's `@pytest.mark.smoke` decorator runs. No `[build-system]` table is included — the generated project is not intended to be built/published as a distributable package, only run and tested locally, so a build backend is out of scope.
 
 #### .gitignore Content
 
@@ -220,7 +256,10 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 - **Static heredoc templates vs. templating engine**: Content is generated with plain `cat <<'EOF'` heredocs rather than a templating tool (e.g. `envsubst`), since the only substitution needed is the project name in a couple of places, and heredocs keep the script dependency-free.
 - **Validate-before-create vs. create-then-rollback**: All validation happens before any directory or file is created, avoiding the need for cleanup/rollback logic on failure. This is simpler and safer than partial writes with a rollback path.
 - **No git initialization**: Unlike the earlier Kiro-based draft of this script, this version does not run `git init`/`git commit`. Scaffolding stays a pure filesystem operation; the user decides when and how to initialize version control.
-- **No pytest scaffolding**: Test infrastructure (`pyproject.toml`, `tests/`) is intentionally out of scope for this iteration per the current requirements — the script focuses on the SDD spec/command layout and the minimal Python package skeleton.
+- **`pyproject.toml` declares pytest but does not wire up the src-layout import**: A `tests/` package (`__init__.py` + placeholder `test_{MODULE_NAME}.py`) and a `pyproject.toml` declaring `pytest` as a dev dependency are created alongside `src/`, but package installation (editable install, `[build-system]`, `src`-layout path configuration) is intentionally out of scope for this iteration. The placeholder test avoids importing the Python_Package so `pytest` passes out of the box with zero setup beyond installing the declared dev dependency; wiring the package to be importable from `tests/` is left to the user.
+- **Top-level `tests/` vs. nested under `src/{MODULE_NAME}/tests/`**: Tests are placed at `{PROJECT_NAME}/tests/`, matching the `src/` sibling convention common in modern Python packaging (e.g. `setuptools`/`hatch` src-layouts), rather than nesting them inside the package directory.
+- **`pyproject.toml` over `requirements-dev.txt`**: The dev dependency is declared in `pyproject.toml`'s `[project.optional-dependencies]` rather than a separate `requirements-dev.txt`, keeping a single manifest file and aligning with modern (PEP 621) Python packaging conventions rather than the older pip-specific requirements-file convention.
+- **Custom `smoke` marker over a built-in pytest marker**: The placeholder test uses a project-defined `@pytest.mark.smoke` marker (registered in `pyproject.toml`) rather than a built-in marker like `@pytest.mark.skip`, since built-in markers like `skip`/`xfail` would make the test not actually pass/run. Registering the custom marker in `[tool.pytest.ini_options]` avoids `PytestUnknownMarkWarning`.
 
 ## Constraints
 
@@ -241,9 +280,9 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 
 ### Property 2: Complete directory structure invariant
 
-*For any* valid input pair (project name, module name), the script SHALL create all required directories and files: `src/{module_name}/__init__.py`, `specs/requirements.md`, `specs/design.md`, `specs/tasks.md`, `.claude/commands/spec-requirements.md`, `.claude/commands/spec-design.md`, `.claude/commands/spec-tasks.md`, `.claude/commands/implement-task.md`, `.claude/commands/review.md`, `.gitignore`.
+*For any* valid input pair (project name, module name), the script SHALL create all required directories and files: `src/{module_name}/__init__.py`, `tests/__init__.py`, `tests/test_{module_name}.py`, `pyproject.toml`, `specs/requirements.md`, `specs/design.md`, `specs/tasks.md`, `.claude/commands/spec-requirements.md`, `.claude/commands/spec-design.md`, `.claude/commands/spec-tasks.md`, `.claude/commands/implement-task.md`, `.claude/commands/review.md`, `.gitignore`.
 
-**Validates: Requirements 3.4, 4.1, 4.2, 4.3, 4.4, 4.5, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1**
+**Validates: Requirements 3.4, 3.5, 3.6, 3.7, 3.9, 4.1, 4.2, 4.3, 4.4, 4.5, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1**
 
 ### Property 3: .gitignore content completeness
 
@@ -280,3 +319,15 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 *For any* valid input pair, the generated `.claude/commands/spec-requirements.md` file SHALL contain a `## Before writing or editing anything` heading, and its body SHALL reference: asking control questions before drafting/changing `requirements.md` on ambiguity, asking one question (or a small tightly-related batch) at a time, offering 2-4 mutually exclusive options plus "Other", use of the `AskUserQuestion` tool with an A/B/C/D fallback, and withholding edits until blocking ambiguities are resolved.
 
 **Validates: Requirement 5.7**
+
+### Property 9: Test package validity
+
+*For any* valid input pair, `tests/__init__.py` SHALL exist, `tests/test_{module_name}.py` SHALL exist, contain an `import pytest` statement, define at least one function whose name is prefixed with `test_` and decorated with `@pytest.mark.smoke`, and running `pytest` from within the Project_Root SHALL exit with status 0.
+
+**Validates: Requirements 3.5, 3.6, 3.7, 3.8**
+
+### Property 10: Project manifest completeness
+
+*For any* valid input pair, the generated `pyproject.toml` file SHALL exist at Project_Root, SHALL declare `pytest` as a dependency (under `[project.optional-dependencies].dev`), and SHALL register the `smoke` marker under `[tool.pytest.ini_options].markers`.
+
+**Validates: Requirements 3.9, 3.10**

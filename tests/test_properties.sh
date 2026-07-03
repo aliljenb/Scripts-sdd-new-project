@@ -1,5 +1,5 @@
 #!/bin/bash
-# Property-based tests for new-sdd-project.sh, mapped to the 8 correctness
+# Property-based tests for new-sdd-project.sh, mapped to the 10 correctness
 # properties defined in specs/design.md. Each property is checked against
 # a batch of randomly generated inputs rather than a single fixed example.
 
@@ -93,6 +93,9 @@ for ((i = 0; i < ITERATIONS; i++)); do
     root="$WORKDIR/$proj"
     required_paths=(
         "src/$mod/__init__.py"
+        "tests/__init__.py"
+        "tests/test_$mod.py"
+        "pyproject.toml"
         "specs/requirements.md"
         "specs/design.md"
         "specs/tasks.md"
@@ -186,6 +189,38 @@ for ((i = 0; i < ITERATIONS; i++)); do
     assert "Property 8: $proj spec-requirements.md mentions withholding edits until resolved" "grep -q 'blocking' '$cmd_file'"
 done
 echo "Property 8 (spec-requirements.md control-question gate content): done"
+
+# --- Property 9: Test package validity ---
+if command -v pytest >/dev/null 2>&1; then
+    for ((i = 0; i < ITERATIONS; i++)); do
+        proj="p9-$(random_valid_project_name)-$i"
+        mod=$(random_valid_module_name)
+        run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
+        root="$WORKDIR/$proj"
+        assert "Property 9: $proj tests/__init__.py exists" "[ -f '$root/tests/__init__.py' ]"
+        assert "Property 9: $proj tests/test_$mod.py exists" "[ -f '$root/tests/test_$mod.py' ]"
+        assert "Property 9: $proj tests/test_$mod.py defines a test_ function" "grep -q '^def test_' '$root/tests/test_$mod.py'"
+        assert "Property 9: $proj tests/test_$mod.py imports pytest" "grep -q '^import pytest$' '$root/tests/test_$mod.py'"
+        assert "Property 9: $proj tests/test_$mod.py decorated with @pytest.mark.smoke" "grep -q '^@pytest.mark.smoke$' '$root/tests/test_$mod.py'"
+        (cd "$root" && pytest -q >/dev/null 2>&1)
+        assert "Property 9: $proj pytest exits 0" "[ $? -eq 0 ]"
+    done
+    echo "Property 9 (test package validity): done"
+else
+    echo "Property 9 (test package validity): SKIPPED (pytest not found on PATH)"
+fi
+
+# --- Property 10: Project manifest completeness ---
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p10-$(random_valid_project_name)-$i"
+    mod=$(random_valid_module_name)
+    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
+    pyproject="$WORKDIR/$proj/pyproject.toml"
+    assert "Property 10: $proj pyproject.toml exists" "[ -f '$pyproject' ]"
+    assert "Property 10: $proj pyproject.toml declares pytest dev dependency" "grep -q 'dev = \[\"pytest\"\]' '$pyproject'"
+    assert "Property 10: $proj pyproject.toml registers smoke marker" "grep -q 'smoke: marks a test as a smoke test' '$pyproject'"
+done
+echo "Property 10 (project manifest completeness): done"
 
 echo ""
 if [ "$FAILURES" -eq 0 ]; then
