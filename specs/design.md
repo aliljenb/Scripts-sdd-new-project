@@ -2,32 +2,36 @@
 
 ## Overview
 
-The SDD Project Scaffold script is a single-file Bash script that generates a complete spec-driven development project structure for Python, driven by the Claude CLI. It follows a linear pipeline architecture: prompt for input → validate → create directory structure → write file contents → report results.
+The SDD Project Scaffold script is a single-file Bash script that generates a complete spec-driven development project structure for Python, driven by the Claude CLI. It follows a linear pipeline architecture: prompt for input → validate → create directory structure → write file contents → initialize git → report results.
 
 ## Architecture
 
 ### Pipeline Stages
 
-The script executes as a sequential pipeline with early-exit on failure:
+The script executes as a sequential pipeline with early-exit on validation failure. The Git Init stage is best-effort and never causes a non-zero exit:
 
 ```
-┌─────────┐    ┌──────────┐    ┌─────────────┐    ┌───────────────┐    ┌────────┐
-│  Prompt  │───▶│ Validate │───▶│ Create Dirs │───▶│ Write Files   │───▶│ Report │
-└─────────┘    └──────────┘    └─────────────┘    └───────────────┘    └────────┘
-                    │                                                        │
-                    ▼                                                        ▼
-              Exit non-zero                                            Exit 0 + tree
+┌─────────┐  ┌──────────┐  ┌─────────────┐  ┌───────────────┐  ┌──────────┐  ┌────────┐
+│  Prompt  │─▶│ Validate │─▶│ Create Dirs │─▶│ Write Files   │─▶│ Git Init │─▶│ Report │
+└─────────┘  └──────────┘  └─────────────┘  └───────────────┘  └──────────┘  └────────┘
+                  │                                                  │             │
+                  ▼                                                  ▼             ▼
+            Exit non-zero                                   Warn on failure   Exit 0 + tree
+                                                              (never exits non-zero)
 ```
 
 1. **Prompt Stage** — Read project name and module name from stdin via `read`
 2. **Validate Stage** — Reject empty inputs, invalid Python identifiers, and pre-existing directories
 3. **Create Dirs Stage** — Create the full directory tree using `mkdir -p`
 4. **Write Files Stage** — Write all template files using heredocs/`cat`
-5. **Report Stage** — Print success message and directory structure
+5. **Git Init Stage** — Initialize a git repository inside Project_Root and create the initial commit, best-effort
+6. **Report Stage** — Print success message and directory structure
 
 ### Error Handling
 
 Each validation check triggers immediate exit with a non-zero status code and an error message to stdout. The script does not attempt partial cleanup on failure — validation runs before any filesystem changes, so a failed run never leaves a partially created project on disk.
+
+The Git Init stage runs only after the full file structure already exists successfully, so it follows a different error-handling policy: any failure there (missing `git`, `git init`/`add`/`commit` failing) is non-fatal. The script prints a warning and continues to the Report stage with exit code 0 — scaffolding success is never coupled to git succeeding.
 
 ## Components
 
@@ -203,7 +207,30 @@ or changing requirements.md.
 
 This content is static (no variable substitution) and identical across every generated project, since it governs Claude's process rather than any project-specific detail.
 
-### 5. Success Reporting
+### 5. Git Initialization
+
+```bash
+GIT_INITIALIZED=0
+if command -v git >/dev/null 2>&1; then
+    if (cd "$PROJECT_NAME" && git init -q && git add -A && git commit -q -m "Initial project creation") >/dev/null 2>&1; then
+        GIT_INITIALIZED=1
+    else
+        echo "Warning: git initialization or commit failed; skipping repository setup."
+    fi
+else
+    echo "Warning: git not found; skipping repository initialization."
+fi
+```
+
+Design notes:
+- Runs in a subshell (`(cd "$PROJECT_NAME" && ...)`) so the script's own working directory is unaffected regardless of success or failure.
+- `git init -q`, `git add -A`, and `git commit -q -m "..."` are chained with `&&` so any failure short-circuits the rest and falls through to the warning branch — no partial-commit state to reason about.
+- Always runs `git init` inside Project_Root, even if the current working directory is already part of another git repository (Requirement 9.4) — no detection/skip logic for nested repositories.
+- Does not pass `-c user.name=`/`-c user.email=` or run `git config`; the commit relies entirely on the user's existing global git configuration (Requirement 9.5). If that configuration is missing, `git commit` fails and is caught by the same warning branch as any other git failure.
+- Both git's own stdout/stderr are suppressed (`>/dev/null 2>&1`), and the script prints its own fixed warning text instead. This keeps the warning message deterministic and testable regardless of the installed git version's exact wording.
+- `GIT_INITIALIZED` is tracked but not currently branched on by the Report stage — the Report stage's output is unconditional (see below); the variable exists so a future iteration could report git status without restructuring this stage.
+
+### 6. Success Reporting
 
 ```bash
 echo ""
@@ -213,7 +240,7 @@ echo "Directory structure:"
 find "$PROJECT_NAME" -print | sed -e "s;[^/]*/;  ;g;s;  \([^ ]\);├─ \1;"
 ```
 
-The directory structure display uses commands available on default macOS (`find`, `sed`) to render a tree without requiring the `tree` package.
+The directory structure display uses commands available on default macOS (`find`, `sed`) to render a tree without requiring the `tree` package. The success message and tree are printed regardless of whether Git Init succeeded, since Requirement 9.6/9.7 require the script to still report overall success in that case; any git warning was already printed during the Git Init stage, immediately above this output.
 
 ## Data Flow
 
@@ -227,6 +254,9 @@ User Input ──▶ Variables (PROJECT_NAME, MODULE_NAME)
              Filesystem Operations (mkdir, cat)
                     │
                     ▼
+             Git Init (best-effort; warn on failure, never exits non-zero)
+                    │
+                    ▼
              stdout (success message + tree)
 ```
 
@@ -236,9 +266,9 @@ User Input ──▶ Variables (PROJECT_NAME, MODULE_NAME)
 - **stdin**: Project name (line 1), Module name (line 2)
 
 ### Outputs
-- **stdout**: Prompts, success message, directory tree (on success); error messages (on failure)
-- **Exit code**: 0 on success, non-zero on validation failure
-- **Filesystem**: Complete project directory tree at `./{PROJECT_NAME}/`
+- **stdout**: Prompts, success message, directory tree (on success); error messages (on validation failure); a git warning message (on git unavailability/failure)
+- **Exit code**: 0 on success (including when Git Init fails or is skipped), non-zero on validation failure
+- **Filesystem**: Complete project directory tree at `./{PROJECT_NAME}/`; if `git` is available and succeeds, `./{PROJECT_NAME}/` is also a git repository containing a single commit ("Initial project creation") with all generated files tracked and a clean working tree
 
 ### Usage
 
@@ -255,7 +285,9 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 - **Single-file script vs. multiple sourced files**: A single file was chosen for portability — the script can be copied and run without preserving a directory structure. The trade-off is a longer file, mitigated by clear stage comments.
 - **Static heredoc templates vs. templating engine**: Content is generated with plain `cat <<'EOF'` heredocs rather than a templating tool (e.g. `envsubst`), since the only substitution needed is the project name in a couple of places, and heredocs keep the script dependency-free.
 - **Validate-before-create vs. create-then-rollback**: All validation happens before any directory or file is created, avoiding the need for cleanup/rollback logic on failure. This is simpler and safer than partial writes with a rollback path.
-- **No git initialization**: Unlike the earlier Kiro-based draft of this script, this version does not run `git init`/`git commit`. Scaffolding stays a pure filesystem operation; the user decides when and how to initialize version control.
+- **Git initialization is best-effort, not a hard requirement**: The script runs `git init`/`git add -A`/`git commit` after the file structure is fully written, but treats any failure (missing `git`, failed commit) as a warning rather than a fatal error — scaffolding success (file creation) and git success are decoupled, so a machine without git, or without a configured git identity, still gets a fully scaffolded project and exit code 0.
+- **Always `git init` in Project_Root, no nested-repo detection**: The script does not check whether the current working directory is already inside another git repository before running `git init`. This keeps the logic simple (one unconditional `git init` call) at the cost of occasionally creating a nested repository when scaffolding inside an existing repo — accepted per Requirement 9.4.
+- **Rely on global git identity, never set or override it**: The script does not pass `-c user.name=`/`-c user.email=` or call `git config`. This avoids stamping commits with placeholder identities that don't match the actual developer, at the cost of the commit silently failing (caught by the warning branch) on a machine with no git identity configured at all.
 - **`pyproject.toml` declares pytest but does not wire up the src-layout import**: A `tests/` package (`__init__.py` + placeholder `test_{MODULE_NAME}.py`) and a `pyproject.toml` declaring `pytest` as a dev dependency are created alongside `src/`, but package installation (editable install, `[build-system]`, `src`-layout path configuration) is intentionally out of scope for this iteration. The placeholder test avoids importing the Python_Package so `pytest` passes out of the box with zero setup beyond installing the declared dev dependency; wiring the package to be importable from `tests/` is left to the user.
 - **Top-level `tests/` vs. nested under `src/{MODULE_NAME}/tests/`**: Tests are placed at `{PROJECT_NAME}/tests/`, matching the `src/` sibling convention common in modern Python packaging (e.g. `setuptools`/`hatch` src-layouts), rather than nesting them inside the package directory.
 - **`pyproject.toml` over `requirements-dev.txt`**: The dev dependency is declared in `pyproject.toml`'s `[project.optional-dependencies]` rather than a separate `requirements-dev.txt`, keeping a single manifest file and aligning with modern (PEP 621) Python packaging conventions rather than the older pip-specific requirements-file convention.
@@ -263,7 +295,8 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 
 ## Constraints
 
-- Uses only `/bin/bash` and default macOS commands: `echo`, `read`, `mkdir`, `cat`, `find`, `sed`
+- Uses only `/bin/bash` and default macOS commands: `echo`, `read`, `mkdir`, `cat`, `find`, `sed`, `command`
+- `git` is used opportunistically (Requirement 9) but is not a hard dependency — its absence is detected via `command -v git` and degrades gracefully rather than violating the "no additional tools required" constraint of Requirement 7
 - Single-file script, no external dependencies
 - No network access required
 - All file content is static templates (no dynamic fetching)
@@ -331,3 +364,15 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 *For any* valid input pair, the generated `pyproject.toml` file SHALL exist at Project_Root, SHALL declare `pytest` as a dependency (under `[project.optional-dependencies].dev`), and SHALL register the `smoke` marker under `[tool.pytest.ini_options].markers`.
 
 **Validates: Requirements 3.9, 3.10**
+
+### Property 11: Git repository initialization completeness
+
+*For any* valid input pair, when `git` is available on `PATH` and a global git identity is configured, the script SHALL create a `.git/` directory inside Project_Root, `git log` inside Project_Root SHALL show exactly one commit whose message is `Initial project creation`, that commit SHALL include every path required by Property 2, and `git status --porcelain` inside Project_Root SHALL report a clean working tree afterward.
+
+**Validates: Requirements 9.1, 9.2, 9.3, 9.4**
+
+### Property 12: Graceful degradation without git
+
+*For any* valid input pair, when `git` is not available on `PATH`, the script SHALL still create the complete file structure (satisfying Property 2), SHALL print a warning message to stdout, SHALL exit with status code 0, and SHALL NOT create a `.git/` directory inside Project_Root.
+
+**Validates: Requirements 9.6, 9.7**

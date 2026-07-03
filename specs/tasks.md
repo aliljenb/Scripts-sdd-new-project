@@ -129,3 +129,22 @@
 - [x] 20.1 Run the script interactively end-to-end, `cd` into the generated project, run `pytest -q`, and confirm it exits 0 with no `PytestUnknownMarkWarning` in the output
 - [x] 20.2 Confirm the generated `pyproject.toml` content matches the design (`[project]`, `[project.optional-dependencies].dev = ["pytest"]`, `[tool.pytest.ini_options].markers` registering `smoke`)
 - [x] 20.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 10 test
+
+## Task 21: Implement Git Init stage
+
+- [x] 21.1 In `new-sdd-project.sh`, add the Git Init stage after the Write Files stage: check `command -v git`, then run `git init -q && git add -A && git commit -q -m "Initial project creation"` in a subshell (`(cd "$PROJECT_NAME" && ...)`) with git's own output suppressed, printing a fixed `Warning: ...` message to stdout on any failure (missing `git`, or `init`/`add`/`commit` failing), per `specs/design.md` Component 5
+- [x] 21.2 Add `tests/test_scaffold.sh` assertions: with `git` available, a valid scaffold run creates a `.git/` directory inside the project, `git log` shows exactly one commit with message `Initial project creation`, and `git status --porcelain` is clean afterward
+
+## Task 22: Write property-based tests — git initialization
+
+- [x] 22.1 Write property test: Git repository initialization completeness (Property 11)
+  - **Feature: sdd-project-scaffold, Property 11: For any valid input pair, when git is available on PATH and a global identity is configured, the script creates `.git/` inside Project_Root, `git log` shows exactly one commit whose message is "Initial project creation" covering every path required by Property 2, and `git status --porcelain` reports a clean working tree afterward**
+- [x] 22.2 Write property test: Graceful degradation without git (Property 12)
+  - **Feature: sdd-project-scaffold, Property 12: For any valid input pair, when git is not available on PATH, the script still creates the complete file structure, prints a warning message, exits 0, and creates no `.git/` directory inside Project_Root**
+  - Implementation note: simulate a git-less environment with a minimal `PATH` containing symlinks to every tool the script needs (`bash`, `mkdir`, `cat`, `find`, `sed`, `grep`, `printf`, etc.) but not `git`, so `command -v git` reliably fails without breaking any other stage of the script
+
+## Task 23: Manual verification — git initialization
+
+- [x] 23.1 Run the script interactively end-to-end in a directory with `git` available and a configured global identity; confirm `.git/` exists, `git log -1` shows the "Initial project creation" commit, and `git status --porcelain` is empty
+- [x] 23.2 Re-run the script with `PATH` restricted to exclude `git`; confirm the script still completes the full scaffold, prints a git warning, exits 0, and creates no `.git/` directory
+- [x] 23.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 11 and Property 12 tests

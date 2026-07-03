@@ -186,6 +186,17 @@ venv/
 .DS_Store
 EOF
 
+GIT_INITIALIZED=0
+if command -v git >/dev/null 2>&1; then
+    if (cd "$PROJECT_NAME" && git init -q && git add -A && git commit -q -m "Initial project creation") >/dev/null 2>&1; then
+        GIT_INITIALIZED=1
+    else
+        echo "Warning: git initialization or commit failed; skipping repository setup."
+    fi
+else
+    echo "Warning: git not found; skipping repository initialization."
+fi
+
 echo ""
 echo "Project '$PROJECT_NAME' created successfully!"
 echo ""
