@@ -1,5 +1,5 @@
 #!/bin/bash
-# Property-based tests for new-sdd-project.sh, mapped to the 7 correctness
+# Property-based tests for new-sdd-project.sh, mapped to the 8 correctness
 # properties defined in specs/design.md. Each property is checked against
 # a batch of randomly generated inputs rather than a single fixed example.
 
@@ -169,6 +169,23 @@ for ((i = 0; i < ITERATIONS; i++)); do
     assert "Property 7: stdout references '$mod' path" "echo \"\$OUTPUT\" | grep -q '$mod'"
 done
 echo "Property 7 (success output contains structure): done"
+
+# --- Property 8: spec-requirements.md control-question gate content ---
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p8-$(random_valid_project_name)-$i"
+    mod=$(random_valid_module_name)
+    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
+    cmd_file="$WORKDIR/$proj/.claude/commands/spec-requirements.md"
+    assert "Property 8: $proj spec-requirements.md has gate heading" "grep -q '^## Before writing or editing anything$' '$cmd_file'"
+    assert "Property 8: $proj spec-requirements.md mentions stopping to ask on ambiguity" "grep -q 'stop and ask control questions' '$cmd_file'"
+    assert "Property 8: $proj spec-requirements.md mentions one question at a time" "grep -q 'one question at a time' '$cmd_file'"
+    assert "Property 8: $proj spec-requirements.md mentions 2-4 mutually exclusive options" "grep -q '2-4 concrete, mutually exclusive' '$cmd_file'"
+    assert "Property 8: $proj spec-requirements.md mentions Other free text" "grep -qi '\"Other\" with free text' '$cmd_file'"
+    assert "Property 8: $proj spec-requirements.md mentions AskUserQuestion tool" "grep -q 'AskUserQuestion' '$cmd_file'"
+    assert "Property 8: $proj spec-requirements.md mentions A/B/C/D fallback" "grep -q 'A/B/C/D' '$cmd_file'"
+    assert "Property 8: $proj spec-requirements.md mentions withholding edits until resolved" "grep -q 'blocking' '$cmd_file'"
+done
+echo "Property 8 (spec-requirements.md control-question gate content): done"
 
 echo ""
 if [ "$FAILURES" -eq 0 ]; then
