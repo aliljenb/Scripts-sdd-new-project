@@ -1,5 +1,5 @@
 #!/bin/bash
-# Property-based tests for new-sdd-project.sh, mapped to the 12 correctness
+# Property-based tests for new-sdd-project.sh, mapped to the 13 correctness
 # properties defined in specs/design.md. Each property is checked against
 # a batch of randomly generated inputs rather than a single fixed example.
 
@@ -170,6 +170,9 @@ for ((i = 0; i < ITERATIONS; i++)); do
     assert "Property 7: stdout contains success message for '$proj'" "echo \"\$OUTPUT\" | grep -q \"Project '$proj' created successfully\""
     assert "Property 7: stdout references '$proj' path" "echo \"\$OUTPUT\" | grep -q '$proj'"
     assert "Property 7: stdout references '$mod' path" "echo \"\$OUTPUT\" | grep -q '$mod'"
+    if command -v git >/dev/null 2>&1; then
+        assert "Property 7: stdout for '$proj' excludes .git" "! echo \"\$OUTPUT\" | grep -qE '\.git(\$|[^a-zA-Z])'"
+    fi
 done
 echo "Property 7 (success output contains structure): done"
 
@@ -222,6 +225,17 @@ for ((i = 0; i < ITERATIONS; i++)); do
 done
 echo "Property 10 (project manifest completeness): done"
 
+# --- Property 13: design.md template source-layout note ---
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p13-$(random_valid_project_name)-$i"
+    mod=$(random_valid_module_name)
+    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
+    design_md="$WORKDIR/$proj/specs/design.md"
+    assert "Property 13: $proj design.md has Source Layout Constraint heading" "grep -q '^## Source Layout Constraint$' '$design_md'"
+    assert "Property 13: $proj design.md note references src/$mod/" "grep -q \"src/$mod/\" '$design_md'"
+done
+echo "Property 13 (design.md template source-layout note): done"
+
 # --- Property 11: Git repository initialization completeness ---
 GIT_IDENTITY_OK=0
 if command -v git >/dev/null 2>&1; then
@@ -240,7 +254,7 @@ if [ "$GIT_IDENTITY_OK" = "1" ]; then
         root="$WORKDIR/$proj"
         assert "Property 11: $proj .git/ exists" "[ -d '$root/.git' ]"
         assert "Property 11: $proj exactly one commit" "[ \"\$(cd '$root' && git log --oneline | wc -l | tr -d ' ')\" = '1' ]"
-        assert "Property 11: $proj commit message correct" "(cd '$root' && git log -1 --pretty=%s) | grep -q '^Initial project creation$'"
+        assert "Property 11: $proj commit message correct" "(cd '$root' && git log -1 --pretty=%s) | grep -q '^Create initial project$'"
         assert "Property 11: $proj working tree clean" "[ -z \"\$(cd '$root' && git status --porcelain)\" ]"
         tracked_files=$(cd "$root" && git ls-tree -r --name-only HEAD)
         required_tracked_paths=(

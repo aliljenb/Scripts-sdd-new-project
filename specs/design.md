@@ -116,7 +116,7 @@ All files are written using `cat` with heredocs. The content is deterministic gi
 | `tests/test_{MODULE_NAME}.py` | Placeholder pytest test module: imports `pytest`, one trivially-passing test function decorated with `@pytest.mark.smoke` |
 | `pyproject.toml` | Declares `pytest` as a dev dependency; registers the `smoke` pytest marker |
 | `specs/requirements.md` | Markdown template with heading and placeholder |
-| `specs/design.md` | Markdown template with heading and placeholder |
+| `specs/design.md` | Markdown template with heading, placeholder, and a source-layout design note |
 | `specs/tasks.md` | Markdown template with heading and placeholder |
 | `.claude/commands/spec-requirements.md` | Slash command for requirements generation |
 | `.claude/commands/spec-design.md` | Slash command for design generation |
@@ -124,6 +124,20 @@ All files are written using `cat` with heredocs. The content is deterministic gi
 | `.claude/commands/implement-task.md` | Slash command for task implementation |
 | `.claude/commands/review.md` | Slash command for code review |
 | `.gitignore` | Python + macOS ignore patterns |
+
+#### specs/design.md Template Content
+
+```markdown
+# Design
+
+<!-- Define your project design here -->
+
+## Source Layout Constraint
+
+All Python code, except test files, SHALL reside inside `src/$MODULE_NAME/`. Test code belongs in `tests/`.
+```
+
+Unlike `specs/requirements.md` and `specs/tasks.md` (which stay pure placeholders per Requirement 4.5), the `design.md` template additionally embeds a `## Source Layout Constraint` note with `$MODULE_NAME` substituted to the actual Python_Package name (Requirement 4.6). This requires the heredoc to be unquoted (`<< EOF`, not `<< 'EOF'`) so the shell interpolates `$MODULE_NAME`, the same technique already used for `pyproject.toml`'s `$PROJECT_NAME` substitution. The note seeds every scaffolded project with this source-layout rule already documented in its own design doc, so a downstream developer (or Claude, when driving `/spec-design` in that project) sees the constraint before writing any code, rather than needing to rediscover or re-invent it.
 
 #### Placeholder Test Content
 
@@ -212,7 +226,7 @@ This content is static (no variable substitution) and identical across every gen
 ```bash
 GIT_INITIALIZED=0
 if command -v git >/dev/null 2>&1; then
-    if (cd "$PROJECT_NAME" && git init -q && git add -A && git commit -q -m "Initial project creation") >/dev/null 2>&1; then
+    if (cd "$PROJECT_NAME" && git init -q && git add -A && git commit -q -m "Create initial project") >/dev/null 2>&1; then
         GIT_INITIALIZED=1
     else
         echo "Warning: git initialization or commit failed; skipping repository setup."
@@ -237,10 +251,10 @@ echo ""
 echo "Project '$PROJECT_NAME' created successfully!"
 echo ""
 echo "Directory structure:"
-find "$PROJECT_NAME" -print | sed -e "s;[^/]*/;  ;g;s;  \([^ ]\);├─ \1;"
+find "$PROJECT_NAME" -path "$PROJECT_NAME/.git" -prune -o -print | sed -e "s;[^/]*/;  ;g;s;  \([^ ]\);├─ \1;"
 ```
 
-The directory structure display uses commands available on default macOS (`find`, `sed`) to render a tree without requiring the `tree` package. The success message and tree are printed regardless of whether Git Init succeeded, since Requirement 9.6/9.7 require the script to still report overall success in that case; any git warning was already printed during the Git Init stage, immediately above this output.
+The directory structure display uses commands available on default macOS (`find`, `sed`) to render a tree without requiring the `tree` package. The `-path "$PROJECT_NAME/.git" -prune -o -print` pair excludes `.git/` and everything beneath it from the listing (Requirement 8.2) — `-prune` stops `find` from descending into `.git/` and, because it short-circuits the `-o`, also suppresses printing the `.git/` entry itself, while every other entry still reaches `-print` unaffected. This keeps the tree output focused on the generated project content and stable regardless of git internals (object hashes, pack files, etc.), which would otherwise make the tree output non-deterministic across runs. The success message and tree are printed regardless of whether Git Init succeeded, since Requirement 9.6/9.7 require the script to still report overall success in that case; any git warning was already printed during the Git Init stage, immediately above this output.
 
 ## Data Flow
 
@@ -268,7 +282,7 @@ User Input ──▶ Variables (PROJECT_NAME, MODULE_NAME)
 ### Outputs
 - **stdout**: Prompts, success message, directory tree (on success); error messages (on validation failure); a git warning message (on git unavailability/failure)
 - **Exit code**: 0 on success (including when Git Init fails or is skipped), non-zero on validation failure
-- **Filesystem**: Complete project directory tree at `./{PROJECT_NAME}/`; if `git` is available and succeeds, `./{PROJECT_NAME}/` is also a git repository containing a single commit ("Initial project creation") with all generated files tracked and a clean working tree
+- **Filesystem**: Complete project directory tree at `./{PROJECT_NAME}/`; if `git` is available and succeeds, `./{PROJECT_NAME}/` is also a git repository containing a single commit ("Create initial project") with all generated files tracked and a clean working tree
 
 ### Usage
 
@@ -292,6 +306,7 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 - **Top-level `tests/` vs. nested under `src/{MODULE_NAME}/tests/`**: Tests are placed at `{PROJECT_NAME}/tests/`, matching the `src/` sibling convention common in modern Python packaging (e.g. `setuptools`/`hatch` src-layouts), rather than nesting them inside the package directory.
 - **`pyproject.toml` over `requirements-dev.txt`**: The dev dependency is declared in `pyproject.toml`'s `[project.optional-dependencies]` rather than a separate `requirements-dev.txt`, keeping a single manifest file and aligning with modern (PEP 621) Python packaging conventions rather than the older pip-specific requirements-file convention.
 - **Custom `smoke` marker over a built-in pytest marker**: The placeholder test uses a project-defined `@pytest.mark.smoke` marker (registered in `pyproject.toml`) rather than a built-in marker like `@pytest.mark.skip`, since built-in markers like `skip`/`xfail` would make the test not actually pass/run. Registering the custom marker in `[tool.pytest.ini_options]` avoids `PytestUnknownMarkWarning`.
+- **Source-layout constraint documented in `design.md`, not enforced by the Script**: Requirement 4.6 seeds the generated `design.md` template with a note that Python code (except tests) belongs under `src/$MODULE_NAME/`. The Script does not itself enforce this on the downstream project's future code — it only ensures the constraint is documented from day one, on the theory that a scaffolding tool should hand off a documented convention rather than police code the downstream developer (or Claude) hasn't written yet.
 
 ## Constraints
 
@@ -343,7 +358,7 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 
 ### Property 7: Success output contains structure
 
-*For any* valid input pair, the script's stdout SHALL contain a success message and references to the created directory paths.
+*For any* valid input pair, the script's stdout SHALL contain a success message and references to the created directory paths, and SHALL NOT contain any `.git` path reference in the displayed directory structure.
 
 **Validates: Requirements 8.1, 8.2**
 
@@ -367,7 +382,7 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 
 ### Property 11: Git repository initialization completeness
 
-*For any* valid input pair, when `git` is available on `PATH` and a global git identity is configured, the script SHALL create a `.git/` directory inside Project_Root, `git log` inside Project_Root SHALL show exactly one commit whose message is `Initial project creation`, that commit SHALL include every path required by Property 2, and `git status --porcelain` inside Project_Root SHALL report a clean working tree afterward.
+*For any* valid input pair, when `git` is available on `PATH` and a global git identity is configured, the script SHALL create a `.git/` directory inside Project_Root, `git log` inside Project_Root SHALL show exactly one commit whose message is `Create initial project`, that commit SHALL include every path required by Property 2, and `git status --porcelain` inside Project_Root SHALL report a clean working tree afterward.
 
 **Validates: Requirements 9.1, 9.2, 9.3, 9.4**
 
@@ -376,3 +391,9 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 *For any* valid input pair, when `git` is not available on `PATH`, the script SHALL still create the complete file structure (satisfying Property 2), SHALL print a warning message to stdout, SHALL exit with status code 0, and SHALL NOT create a `.git/` directory inside Project_Root.
 
 **Validates: Requirements 9.6, 9.7**
+
+### Property 13: design.md template source-layout note
+
+*For any* valid input pair, the generated `specs/design.md` file SHALL contain a `## Source Layout Constraint` heading, and its body SHALL state that Python code other than test files resides inside `src/{module_name}/`, with `{module_name}` substituted to the actual Python_Package value for that run.
+
+**Validates: Requirement 4.6**

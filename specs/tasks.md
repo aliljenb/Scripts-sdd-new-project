@@ -148,3 +148,32 @@
 - [x] 23.1 Run the script interactively end-to-end in a directory with `git` available and a configured global identity; confirm `.git/` exists, `git log -1` shows the "Initial project creation" commit, and `git status --porcelain` is empty
 - [x] 23.2 Re-run the script with `PATH` restricted to exclude `git`; confirm the script still completes the full scaffold, prints a git warning, exits 0, and creates no `.git/` directory
 - [x] 23.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 11 and Property 12 tests
+
+## Task 24: Update initial commit message text
+
+- [x] 24.1 In `new-sdd-project.sh`, change the Git Init stage's commit message from `Initial project creation` to `Create initial project`, per updated Requirement 9.3
+- [x] 24.2 Update `tests/test_scaffold.sh`'s commit-message assertion to expect `Create initial project`
+- [x] 24.3 Update `tests/test_properties.sh`'s Property 11 commit-message assertion to expect `Create initial project`
+
+## Task 25: Exclude .git/ from the directory structure output
+
+- [x] 25.1 In `new-sdd-project.sh`, update the Report stage's `find` invocation to `find "$PROJECT_NAME" -path "$PROJECT_NAME/.git" -prune -o -print | sed ...`, excluding `.git/` and its contents from the displayed tree, per updated Requirement 8.2 and `specs/design.md` Component 6
+- [x] 25.2 Add a `tests/test_scaffold.sh` assertion: for a project scaffolded with `git` available, the success-report stdout output SHALL NOT contain `.git`
+- [x] 25.3 Update the Property 7 test (Success output contains structure) in `tests/test_properties.sh` to also assert stdout contains no `.git` reference
+
+## Task 26: Manual verification — commit message & tree output
+
+- [x] 26.1 Run the script interactively end-to-end with `git` available; confirm `git log -1 --pretty=%s` prints `Create initial project` and the printed directory structure contains no `.git` entries
+- [x] 26.2 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass with the updated commit message and tree output
+
+## Task 27: Seed source-layout note into the generated design.md template
+
+- [x] 27.1 In `new-sdd-project.sh`, change the `cat > "$PROJECT_NAME/specs/design.md"` heredoc delimiter from quoted (`<< 'EOF'`) to unquoted (`<< EOF`) so `$MODULE_NAME` is interpolated, and append a `## Source Layout Constraint` section stating "All Python code, except test files, SHALL reside inside `src/$MODULE_NAME/`. Test code belongs in `tests/`.", per `specs/design.md`'s `specs/design.md` Template Content
+- [x] 27.2 Add `tests/test_scaffold.sh` assertions: the generated `specs/design.md` contains the `## Source Layout Constraint` heading, and its body references the actual module name substituted (e.g. `src/tree_module/`)
+- [x] 27.3 Write property test: design.md template source-layout note (Property 13)
+  - **Feature: sdd-project-scaffold, Property 13: For any valid input pair, the generated `specs/design.md` contains a `## Source Layout Constraint` heading and states that Python code other than test files resides inside `src/{module_name}/`, with `{module_name}` substituted to the actual Python_Package value**
+
+## Task 28: Manual verification — design.md source-layout note
+
+- [x] 28.1 Run the script interactively end-to-end; open the generated `specs/design.md` and confirm the `## Source Layout Constraint` section is present with the correct module name substituted (not a literal `$MODULE_NAME`)
+- [x] 28.2 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 13 test

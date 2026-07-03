@@ -67,6 +67,7 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 3. WHEN the `specs/` directory is created, THE Script SHALL create a `design.md` template file inside `specs/`
 4. WHEN the `specs/` directory is created, THE Script SHALL create a `tasks.md` template file inside `specs/`
 5. EACH Spec_Template SHALL contain a heading and a placeholder comment describing its purpose
+6. WHEN the `design.md` template is created, THE Script SHALL include in its content a design note stating that all Python code, except test files, SHALL reside inside the Python_Package directory under `src/`, so that every project scaffolded by the Script starts with this source-layout constraint already documented for its own future development
 
 ### Requirement 5: Claude CLI SDD commands
 
@@ -115,7 +116,7 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 #### Acceptance Criteria
 
 1. WHEN all files and directories are created successfully, THE Script SHALL print a success message to standard output
-2. WHEN all files and directories are created successfully, THE Script SHALL display the created directory structure to standard output
+2. WHEN all files and directories are created successfully, THE Script SHALL display the created directory structure to standard output, excluding the .git/ folder and its content.
 
 ### Requirement 9: Version control initialization
 
@@ -125,7 +126,7 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 
 1. WHEN the file structure and content have been fully created, IF the `git` command is available, THEN THE Script SHALL initialize a git repository inside Project_Root
 2. WHEN the git repository is initialized, THE Script SHALL stage all created files in the repository
-3. WHEN all created files are staged, THE Script SHALL create a single commit with the message `Initial project creation`
+3. WHEN all created files are staged, THE Script SHALL create a single commit with the message `Create initial project`
 4. THE Script SHALL always run `git init` inside Project_Root, regardless of whether the current working directory is already inside another git repository
 5. THE Script SHALL rely on the user's existing global git configuration (`user.name`/`user.email`) for the commit author identity and SHALL NOT set or override git identity configuration
 6. IF the `git` command is not available on the system, THEN THE Script SHALL skip repository initialization and commit, display a warning message, and still exit with status code 0
