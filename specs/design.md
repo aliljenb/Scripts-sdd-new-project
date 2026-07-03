@@ -136,11 +136,36 @@ venv/
 
 Each file in `.claude/commands/` is a plain-text prompt body (no special frontmatter required) that instructs Claude, when the corresponding slash command is invoked, to read the relevant `specs/*.md` files and update them:
 
-- `spec-requirements.md` → read/refine `specs/requirements.md` (user stories + acceptance criteria)
+- `spec-requirements.md` → read/refine `specs/requirements.md` (user stories + acceptance criteria); additionally embeds a `## Before writing or editing anything` section (see below) that gates edits on resolving blocking ambiguities first
 - `spec-design.md` → read `specs/requirements.md` + `specs/design.md`, refine the design
 - `spec-tasks.md` → read all three specs, refine `specs/tasks.md`
 - `implement-task.md` → read `specs/tasks.md` + `specs/design.md`, implement the next unchecked task
 - `review.md` → read all specs and the source tree, review the implementation against them
+
+#### `spec-requirements.md` — "Before writing or editing anything" section
+
+Embedded verbatim as a heredoc block within `spec-requirements.md`'s content, ahead of the read/refine instructions, so Claude evaluates ambiguity before touching `requirements.md`:
+
+```
+## Before writing or editing anything
+
+If any part of the scope is unclear, ambiguous, or could reasonably be
+interpreted more than one way — target users/roles, feature boundaries,
+edge cases, priority/must-have vs nice-to-have, measurable thresholds for
+acceptance criteria, etc. — stop and ask control questions before drafting
+or changing requirements.md.
+
+- Ask one question at a time, or a small batch of tightly related ones.
+- Each question must offer 2-4 concrete, mutually exclusive multiple-choice
+  options (plus the user can always answer "Other" with free text).
+- Use the `AskUserQuestion` tool so the options are clickable. Only fall
+  back to a lettered list (A/B/C/D) in chat if that tool isn't available.
+- Do not proceed to writing or editing requirements.md until blocking
+  ambiguities are resolved. Minor, non-blocking assumptions can just be
+  stated inline in the requirement instead of asked about.
+```
+
+This content is static (no variable substitution) and identical across every generated project, since it governs Claude's process rather than any project-specific detail.
 
 ### 5. Success Reporting
 
@@ -249,3 +274,9 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 *For any* valid input pair, the script's stdout SHALL contain a success message and references to the created directory paths.
 
 **Validates: Requirements 8.1, 8.2**
+
+### Property 8: spec-requirements.md control-question gate content
+
+*For any* valid input pair, the generated `.claude/commands/spec-requirements.md` file SHALL contain a `## Before writing or editing anything` heading, and its body SHALL reference: asking control questions before drafting/changing `requirements.md` on ambiguity, asking one question (or a small tightly-related batch) at a time, offering 2-4 mutually exclusive options plus "Other", use of the `AskUserQuestion` tool with an A/B/C/D fallback, and withholding edits until blocking ambiguities are resolved.
+
+**Validates: Requirement 5.7**

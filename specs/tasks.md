@@ -76,3 +76,11 @@
 - [x] 11.3 Update `tests/test_properties.sh`: change the `SCAFFOLD` path variable and header comment from `scaffold.sh` to `new-sdd-project.sh`
 - [x] 11.4 Update `.claude/settings.local.json` permission entries referencing the script path, if any point at the old filename
 - [x] 11.5 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions still pass against the renamed script
+
+## Task 12: Embed control-question gate in generated `spec-requirements.md`
+
+- [x] 12.1 In `new-sdd-project.sh`, add a `## Before writing or editing anything` section (verbatim per `specs/design.md`) to the `cat > "$PROJECT_NAME/.claude/commands/spec-requirements.md"` heredoc, placed ahead of the existing read/refine instructions
+- [x] 12.2 Update this repo's own `.claude/commands/spec-requirements.md` to match, so this project follows the same gate it generates for others
+- [x] 12.3 Write property test: spec-requirements.md control-question gate content (Property 8)
+  - **Feature: sdd-project-scaffold, Property 8: For any valid input pair, the generated `.claude/commands/spec-requirements.md` contains the `## Before writing or editing anything` heading and its required instructions (ask-before-drafting on ambiguity, one question/small batch at a time, 2-4 mutually exclusive options plus "Other", `AskUserQuestion` tool with A/B/C/D fallback, withhold edits until resolved)**
+- [x] 12.4 Run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 8 test

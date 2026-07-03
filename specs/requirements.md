@@ -72,6 +72,12 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 4. WHEN the `.claude/commands/` directory is created, THE Script SHALL create a `spec-tasks.md` command that instructs Claude to read the specs and refine `specs/tasks.md`
 5. WHEN the `.claude/commands/` directory is created, THE Script SHALL create an `implement-task.md` command that instructs Claude to implement the next unchecked task in `specs/tasks.md`
 6. WHEN the `.claude/commands/` directory is created, THE Script SHALL create a `review.md` command that instructs Claude to review the implementation against the specs
+7. WHEN the `spec-requirements.md` command is created, THE Script SHALL include in its content a `## Before writing or editing anything` section that instructs Claude to:
+   - Stop and ask the user control questions before drafting or changing `requirements.md` whenever any part of the scope is unclear, ambiguous, or could reasonably be interpreted more than one way (including target users/roles, feature boundaries, edge cases, priority/must-have vs. nice-to-have, and measurable thresholds for acceptance criteria)
+   - Ask one question at a time, or a small batch of tightly related questions
+   - Offer 2-4 concrete, mutually exclusive multiple-choice options per question (in addition to a free-text "Other" option)
+   - Use the `AskUserQuestion` tool so options are clickable, falling back to a lettered list (A/B/C/D) in chat only if that tool is unavailable
+   - Withhold writing or editing `requirements.md` until blocking ambiguities are resolved, while stating minor non-blocking assumptions inline in the requirement text rather than asking about them
 
 ### Requirement 6: Git ignore rules
 
