@@ -141,12 +141,18 @@ assert "spec-tasks.md references specs/tasks.md" "grep -q 'specs/tasks.md' '$CMD
 assert "implement-task.md references specs/tasks.md" "grep -q 'specs/tasks.md' '$CMD_DIR/implement-task.md'"
 assert "review.md references specs/requirements.md" "grep -q 'specs/requirements.md' '$CMD_DIR/review.md'"
 
+assert "implement-task.md has Before implementing heading" "grep -q '^## Before implementing$' '$CMD_DIR/implement-task.md'"
+assert "implement-task.md mentions AskUserQuestion tool" "grep -q 'AskUserQuestion' '$CMD_DIR/implement-task.md'"
+assert "implement-task.md references skipping the question for one remaining task" "grep -q 'exactly one unchecked task remains' '$CMD_DIR/implement-task.md'"
+assert "implement-task.md references stopping on error without continuing" "grep -q 'stop immediately' '$CMD_DIR/implement-task.md'"
+
 # --- Task 7: .gitignore generation ---
 
 GITIGNORE="$WORKDIR/tree-project/.gitignore"
 
 assert "creates .gitignore" "[ -f '$GITIGNORE' ]"
-for pattern in '__pycache__/' '\*\.py\[cod\]' '\.eggs/' '\*\.egg-info/' 'dist/' 'build/' '\.venv/' '^venv/$' '\.pytest_cache/' '\.mypy_cache/' '\.DS_Store'; do
+for pattern in '__pycache__/' '\*\.py\[cod\]' '\.eggs/' '\*\.egg-info/' 'dist/' 'build/' '\.venv/' '^venv/$' '\.pytest_cache/' '\.mypy_cache/' '\.DS_Store' '\.idea/' \
+    '\*\.class' 'target/' 'node_modules/' '\.next/' '\.vercel' '^\.env$' '\*\.iml' '\.vscode/\*' '\.Spotlight-V100' '\*\.log'; do
     assert ".gitignore contains $pattern" "grep -q -- '$pattern' '$GITIGNORE'"
 done
 

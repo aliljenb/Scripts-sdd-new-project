@@ -173,18 +173,156 @@ markers = [
 #### .gitignore Content
 
 ```
+### Java ###
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+gradle-app.setting
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### Python ###
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
 .eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+*.mo
+*.pot
+instance/
+.webassets-cache
+.scrapy
+docs/_build/
+.pybuilder/
+target/
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
+__pypackages__/
+celerybeat-schedule
+celerybeat.pid
+*.sage.py
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+
+### Node ###
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnp
+.pnp.js
+.pnp.cjs
+
+### React / Frontend build ###
 dist/
 build/
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.eslintcache
+.turbo/
+.vercel
+coverage/
+*.tsbuildinfo
+
+# Env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### PyCharm ###
+# (PyCharm uses the same .idea/ folder as IntelliJ, already covered above)
+# If you want to keep some shared run configs, you can unignore selectively:
+# !.idea/runConfigurations
+
+### VS Code ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+
+### OS ###
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+### Logs ###
+logs/
+*.log
+
 ```
+
+`.idea/` excludes JetBrains IDE project metadata (PyCharm, IntelliJ with the Python plugin), mirroring the treatment of `.DS_Store` for macOS Finder metadata: neither is a Python packaging artifact, but both are per-developer environment noise that should never be tracked. Requirement 6.2's pattern list is introduced with "including," i.e. non-exhaustive, so this addition doesn't require a requirements change.
 
 #### Claude Command Content
 
@@ -193,7 +331,7 @@ Each file in `.claude/commands/` is a plain-text prompt body (no special frontma
 - `spec-requirements.md` → read/refine `specs/requirements.md` (user stories + acceptance criteria); additionally embeds a `## Before writing or editing anything` section (see below) that gates edits on resolving blocking ambiguities first
 - `spec-design.md` → read `specs/requirements.md` + `specs/design.md`, refine the design
 - `spec-tasks.md` → read all three specs, refine `specs/tasks.md`
-- `implement-task.md` → read `specs/tasks.md` + `specs/design.md`, implement the next unchecked task
+- `implement-task.md` → read `specs/tasks.md` + `specs/design.md`; if more than one unchecked task remains, ask whether to implement all remaining tasks at once or one at a time before implementing any of them (see below), then implement accordingly
 - `review.md` → read all specs and the source tree, review the implementation against them
 
 #### `spec-requirements.md` — "Before writing or editing anything" section
@@ -220,6 +358,44 @@ or changing requirements.md.
 ```
 
 This content is static (no variable substitution) and identical across every generated project, since it governs Claude's process rather than any project-specific detail.
+
+#### `implement-task.md` — all-at-once vs. one-by-one gate
+
+Embedded within `implement-task.md`'s content, ahead of the implementation guidelines, so Claude decides the execution mode before touching any task:
+
+```
+Read the files `specs/tasks.md` and `specs/design.md` and implement the next unchecked task.
+
+## Before implementing
+
+Count the unchecked tasks (marked with `- [ ]`) in `specs/tasks.md`.
+- IF more than one unchecked task remains, ask the user whether to implement
+  all remaining unchecked tasks at once or one at a time. Use the
+  `AskUserQuestion` tool so the choice is clickable, falling back to a
+  lettered list in chat if that tool is unavailable.
+- IF exactly one unchecked task remains, skip this question and implement
+  it directly.
+
+Follow these guidelines:
+- Find the first unchecked task (marked with `- [ ]`) in `specs/tasks.md`
+- Read the design document for implementation guidance
+- Write the code to implement the task
+- Write tests for the implementation
+- Mark the task as complete (change `- [ ]` to `- [x]`) in `specs/tasks.md`
+
+After implementation, run the tests to verify correctness.
+
+If the user chose "all at once", repeat this process for each remaining
+unchecked task in order. If an error or test failure occurs while
+implementing any task, stop immediately, leave that task and all
+subsequent tasks unchecked, and report the failure to the user rather
+than continuing to later tasks.
+```
+
+Design notes:
+- The single-task skip (Requirement 5.7) avoids a pointless prompt when there is nothing to choose between — with one task left, "all at once" and "one at a time" are the same outcome.
+- The stop-on-failure rule (Requirement 5.8) favors a hard stop over skip-and-continue: letting Claude push through a failed task risks later tasks being implemented against code that doesn't actually work yet, compounding the failure instead of surfacing it early.
+- This content is static (no variable substitution) and identical across every generated project, mirroring the `spec-requirements.md` gate above.
 
 ### 5. Git Initialization
 
@@ -330,11 +506,11 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 
 *For any* valid input pair (project name, module name), the script SHALL create all required directories and files: `src/{module_name}/__init__.py`, `tests/__init__.py`, `tests/test_{module_name}.py`, `pyproject.toml`, `specs/requirements.md`, `specs/design.md`, `specs/tasks.md`, `.claude/commands/spec-requirements.md`, `.claude/commands/spec-design.md`, `.claude/commands/spec-tasks.md`, `.claude/commands/implement-task.md`, `.claude/commands/review.md`, `.gitignore`.
 
-**Validates: Requirements 3.4, 3.5, 3.6, 3.7, 3.9, 4.1, 4.2, 4.3, 4.4, 4.5, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1**
+**Validates: Requirements 3.4, 3.5, 3.6, 3.7, 3.9, 4.1, 4.2, 4.3, 4.4, 4.5, 5.1, 5.2, 5.3, 5.4, 5.5, 5.9, 6.1**
 
 ### Property 3: .gitignore content completeness
 
-*For any* valid input pair, the generated `.gitignore` file SHALL contain all required patterns: `__pycache__/`, `*.py[cod]`, `.eggs/`, `*.egg-info/`, `dist/`, `build/`, `.venv/`, `venv/`, `.pytest_cache/`, `.mypy_cache/`, and `.DS_Store`.
+*For any* valid input pair, the generated `.gitignore` file SHALL contain all required patterns: `__pycache__/`, `*.py[cod]`, `.eggs/`, `*.egg-info/`, `dist/`, `build/`, `.venv/`, `venv/`, `.pytest_cache/`, `.mypy_cache/`, `.DS_Store`, and `.idea/`.
 
 **Validates: Requirements 6.2, 6.3**
 
@@ -366,7 +542,7 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 
 *For any* valid input pair, the generated `.claude/commands/spec-requirements.md` file SHALL contain a `## Before writing or editing anything` heading, and its body SHALL reference: asking control questions before drafting/changing `requirements.md` on ambiguity, asking one question (or a small tightly-related batch) at a time, offering 2-4 mutually exclusive options plus "Other", use of the `AskUserQuestion` tool with an A/B/C/D fallback, and withholding edits until blocking ambiguities are resolved.
 
-**Validates: Requirement 5.7**
+**Validates: Requirement 5.10**
 
 ### Property 9: Test package validity
 
@@ -397,3 +573,9 @@ echo -e "my-project\nmy_module" | ./new-sdd-project.sh
 *For any* valid input pair, the generated `specs/design.md` file SHALL contain a `## Source Layout Constraint` heading, and its body SHALL state that Python code other than test files resides inside `src/{module_name}/`, with `{module_name}` substituted to the actual Python_Package value for that run.
 
 **Validates: Requirement 4.6**
+
+### Property 14: implement-task.md all-at-once-vs-one-by-one gate content
+
+*For any* valid input pair, the generated `.claude/commands/implement-task.md` file SHALL contain a `## Before implementing` heading, and its body SHALL reference: asking the user (via the `AskUserQuestion` tool) whether to implement all remaining unchecked tasks at once or one at a time when more than one unchecked task remains, skipping that question and implementing directly when exactly one unchecked task remains, and — when "all at once" was chosen — stopping immediately and leaving subsequent tasks unchecked if an error or test failure occurs, rather than continuing.
+
+**Validates: Requirements 5.6, 5.7, 5.8**

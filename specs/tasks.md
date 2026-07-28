@@ -177,3 +177,40 @@
 
 - [x] 28.1 Run the script interactively end-to-end; open the generated `specs/design.md` and confirm the `## Source Layout Constraint` section is present with the correct module name substituted (not a literal `$MODULE_NAME`)
 - [x] 28.2 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 13 test
+
+## Task 29: Add `.idea/` to the generated .gitignore
+
+- [x] 29.1 In `new-sdd-project.sh`, add a `.idea/` line to the `cat > "$PROJECT_NAME/.gitignore"` heredoc, after the existing `.DS_Store` line, per updated `specs/design.md`
+- [x] 29.2 Add a `tests/test_scaffold.sh` assertion: the generated `.gitignore` contains `.idea/`
+- [x] 29.3 Update the Property 3 test (.gitignore content completeness) in `tests/test_properties.sh` to also assert `.idea/` is present
+
+## Task 30: Manual verification — .gitignore .idea/ entry
+
+- [x] 30.1 Run the script interactively end-to-end; confirm the generated `.gitignore` contains `.idea/`
+- [x] 30.2 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the updated Property 3 test
+
+## Task 31: Add all-at-once-vs-one-by-one gate to the generated implement-task.md
+
+- [x] 31.1 In `new-sdd-project.sh`, update the `cat > "$PROJECT_NAME/.claude/commands/implement-task.md"` heredoc to insert a `## Before implementing` section (per `specs/design.md`'s `implement-task.md` — all-at-once vs. one-by-one gate) ahead of the existing "Follow these guidelines" block, instructing Claude to: count unchecked tasks in `specs/tasks.md`; if more than one remains, ask via `AskUserQuestion` (falling back to a lettered list) whether to implement all remaining tasks at once or one at a time; if exactly one remains, skip the question and implement it directly
+- [x] 31.2 Append to the same heredoc, after the existing "After implementation, run the tests to verify correctness." line, the "all at once" loop instruction: if the user chose "all at once", repeat the process for each remaining unchecked task in order, and if an error or test failure occurs while implementing any task, stop immediately, leave that task and all subsequent tasks unchecked, and report the failure rather than continuing
+- [x] 31.3 Add `tests/test_scaffold.sh` assertions: the generated `.claude/commands/implement-task.md` contains the `## Before implementing` heading, references `AskUserQuestion`, references skipping the question when exactly one task remains, and references stopping on error/test failure without continuing to later tasks
+- [x] 31.4 Write property test: implement-task.md all-at-once-vs-one-by-one gate content (Property 14)
+  - **Feature: sdd-project-scaffold, Property 14: For any valid input pair, the generated `.claude/commands/implement-task.md` file contains a `## Before implementing` heading, and its body references asking the user (via `AskUserQuestion`) whether to implement all remaining unchecked tasks at once or one at a time when more than one remains, skipping that question when exactly one remains, and stopping immediately without continuing to later tasks if an error or test failure occurs during "all at once" execution**
+
+## Task 32: Manual verification — implement-task.md ask-once gate
+
+- [x] 32.1 Run the script interactively end-to-end; open the generated `.claude/commands/implement-task.md` and confirm the `## Before implementing` section reads correctly and matches `specs/design.md`
+- [x] 32.2 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 14 test
+
+## Task 33: Expand the generated .gitignore to the comprehensive multi-language template
+
+- [x] 33.1 In `new-sdd-project.sh`, replace the `cat > "$PROJECT_NAME/.gitignore"` heredoc body with the full template from `specs/design.md`'s `.gitignore Content` section — `### Java ###`, `### Python ###`, `### Node ###`, `### React / Frontend build ###` (incl. the `# Env files` sub-block), `### IntelliJ IDEA ###`, `### PyCharm ###`, `### VS Code ###`, `### OS ###`, and `### Logs ###` sections, in that order, verbatim
+- [x] 33.2 Add `tests/test_scaffold.sh` assertions for representative anchor patterns from each new section (e.g. `*.class` and `target/` for Java, `node_modules/` for Node, `.next/` and `.vercel` for React/Frontend, `.env` for the env-files sub-block, `*.iml` for IntelliJ, `.vscode/\*` for VS Code, `.Spotlight-V100` for OS, `*.log` for Logs), alongside the existing pattern assertions
+- [x] 33.3 Update the Property 3 test (.gitignore content completeness) in `tests/test_properties.sh` to also assert the same representative anchor patterns added in 33.2
+- [x] 33.4 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass with the expanded .gitignore content
+
+## Task 34: Manual verification — expanded .gitignore
+
+- [ ] 34.1 Run the script interactively end-to-end; diff the generated `.gitignore` against `specs/design.md`'s `.gitignore Content` block and confirm they match exactly
+- [ ] 34.2 Confirm the previously-required core patterns (`__pycache__/`, `*.py[cod]`, `.eggs/`, `*.egg-info/`, `dist/`, `build/`, `.venv/`, `venv/`, `.pytest_cache/`, `.mypy_cache/`, `.DS_Store`, `.idea/`) are all still present in the expanded file
+- [ ] 34.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass

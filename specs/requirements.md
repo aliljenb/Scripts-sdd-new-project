@@ -80,8 +80,11 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 3. WHEN the `.claude/commands/` directory is created, THE Script SHALL create a `spec-design.md` command that instructs Claude to read `specs/requirements.md` and `specs/design.md` and refine the design
 4. WHEN the `.claude/commands/` directory is created, THE Script SHALL create a `spec-tasks.md` command that instructs Claude to read the specs and refine `specs/tasks.md`
 5. WHEN the `.claude/commands/` directory is created, THE Script SHALL create an `implement-task.md` command that instructs Claude to implement the next unchecked task in `specs/tasks.md`
-6. WHEN the `.claude/commands/` directory is created, THE Script SHALL create a `review.md` command that instructs Claude to review the implementation against the specs
-7. WHEN the `spec-requirements.md` command is created, THE Script SHALL include in its content a `## Before writing or editing anything` section that instructs Claude to:
+6. IF more than one unchecked task (`- [ ]`) remains in `specs/tasks.md` WHEN the `implement-task.md` command is invoked, THEN THE command SHALL instruct Claude to ask the user whether to implement all remaining unchecked tasks at once or one at a time, before implementing any task
+7. IF exactly one unchecked task remains in `specs/tasks.md` WHEN the `implement-task.md` command is invoked, THEN THE command SHALL instruct Claude to implement that task directly without asking the all-at-once-vs-one-by-one question
+8. IF the user chooses to implement all remaining tasks at once, AND an error or test failure occurs while implementing one of the tasks, THEN THE command SHALL instruct Claude to stop the loop immediately, leave that task and all subsequent tasks unchecked, and report the failure to the user, rather than continuing to later tasks
+9. WHEN the `.claude/commands/` directory is created, THE Script SHALL create a `review.md` command that instructs Claude to review the implementation against the specs
+10. WHEN the `spec-requirements.md` command is created, THE Script SHALL include in its content a `## Before writing or editing anything` section that instructs Claude to:
    - Stop and ask the user control questions before drafting or changing `requirements.md` whenever any part of the scope is unclear, ambiguous, or could reasonably be interpreted more than one way (including target users/roles, feature boundaries, edge cases, priority/must-have vs. nice-to-have, and measurable thresholds for acceptance criteria)
    - Ask one question at a time, or a small batch of tightly related questions
    - Offer 2-4 concrete, mutually exclusive multiple-choice options per question (in addition to a free-text "Other" option)

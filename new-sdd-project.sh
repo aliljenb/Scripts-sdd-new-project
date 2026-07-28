@@ -153,6 +153,16 @@ EOF
 cat > "$PROJECT_NAME/.claude/commands/implement-task.md" << 'EOF'
 Read the files `specs/tasks.md` and `specs/design.md` and implement the next unchecked task.
 
+## Before implementing
+
+Count the unchecked tasks (marked with `- [ ]`) in `specs/tasks.md`.
+- IF more than one unchecked task remains, ask the user whether to implement
+  all remaining unchecked tasks at once or one at a time. Use the
+  `AskUserQuestion` tool so the choice is clickable, falling back to a
+  lettered list in chat if that tool is unavailable.
+- IF exactly one unchecked task remains, skip this question and implement
+  it directly.
+
 Follow these guidelines:
 - Find the first unchecked task (marked with `- [ ]`) in `specs/tasks.md`
 - Read the design document for implementation guidance
@@ -161,6 +171,12 @@ Follow these guidelines:
 - Mark the task as complete (change `- [ ]` to `- [x]`) in `specs/tasks.md`
 
 After implementation, run the tests to verify correctness.
+
+If the user chose "all at once", repeat this process for each remaining
+unchecked task in order. If an error or test failure occurs while
+implementing any task, stop immediately, leave that task and all
+subsequent tasks unchecked, and report the failure to the user rather
+than continuing to later tasks.
 EOF
 
 cat > "$PROJECT_NAME/.claude/commands/review.md" << 'EOF'
@@ -177,17 +193,152 @@ Provide a structured review with findings and recommendations.
 EOF
 
 cat > "$PROJECT_NAME/.gitignore" << 'EOF'
+### Java ###
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+gradle-app.setting
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### Python ###
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
 .eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+*.mo
+*.pot
+instance/
+.webassets-cache
+.scrapy
+docs/_build/
+.pybuilder/
+target/
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
+__pypackages__/
+celerybeat-schedule
+celerybeat.pid
+*.sage.py
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+
+### Node ###
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnp
+.pnp.js
+.pnp.cjs
+
+### React / Frontend build ###
 dist/
 build/
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.eslintcache
+.turbo/
+.vercel
+coverage/
+*.tsbuildinfo
+
+# Env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### PyCharm ###
+# (PyCharm uses the same .idea/ folder as IntelliJ, already covered above)
+# If you want to keep some shared run configs, you can unignore selectively:
+# !.idea/runConfigurations
+
+### VS Code ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+
+### OS ###
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+### Logs ###
+logs/
+*.log
 EOF
 
 GIT_INITIALIZED=0

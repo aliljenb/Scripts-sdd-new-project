@@ -113,7 +113,8 @@ done
 echo "Property 2 (complete directory structure invariant): done"
 
 # --- Property 3: .gitignore content completeness ---
-patterns=('__pycache__/' '\*\.py\[cod\]' '\.eggs/' '\*\.egg-info/' 'dist/' 'build/' '\.venv/' '^venv/$' '\.pytest_cache/' '\.mypy_cache/' '\.DS_Store')
+patterns=('__pycache__/' '\*\.py\[cod\]' '\.eggs/' '\*\.egg-info/' 'dist/' 'build/' '\.venv/' '^venv/$' '\.pytest_cache/' '\.mypy_cache/' '\.DS_Store' '\.idea/' \
+    '\*\.class' 'target/' 'node_modules/' '\.next/' '\.vercel' '^\.env$' '\*\.iml' '\.vscode/\*' '\.Spotlight-V100' '\*\.log')
 for ((i = 0; i < ITERATIONS; i++)); do
     proj="p3-$(random_valid_project_name)-$i"
     mod=$(random_valid_module_name)
@@ -306,6 +307,19 @@ for ((i = 0; i < ITERATIONS; i++)); do
     assert "Property 12: $proj creates no .git directory" "[ ! -d '$root/.git' ]"
 done
 echo "Property 12 (graceful degradation without git): done"
+
+# --- Property 14: implement-task.md all-at-once-vs-one-by-one gate content ---
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p14-$(random_valid_project_name)-$i"
+    mod=$(random_valid_module_name)
+    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
+    cmd_file="$WORKDIR/$proj/.claude/commands/implement-task.md"
+    assert "Property 14: $proj implement-task.md has gate heading" "grep -q '^## Before implementing$' '$cmd_file'"
+    assert "Property 14: $proj implement-task.md mentions AskUserQuestion tool" "grep -q 'AskUserQuestion' '$cmd_file'"
+    assert "Property 14: $proj implement-task.md mentions skipping the question for one remaining task" "grep -q 'exactly one unchecked task remains' '$cmd_file'"
+    assert "Property 14: $proj implement-task.md mentions stopping on error without continuing" "grep -q 'stop immediately' '$cmd_file'"
+done
+echo "Property 14 (implement-task.md all-at-once-vs-one-by-one gate content): done"
 
 echo ""
 if [ "$FAILURES" -eq 0 ]; then
