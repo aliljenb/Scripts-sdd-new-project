@@ -104,6 +104,7 @@ for ((i = 0; i < ITERATIONS; i++)); do
         ".claude/commands/spec-tasks.md"
         ".claude/commands/implement-task.md"
         ".claude/commands/review.md"
+        ".claude/CLAUDE.md"
         ".gitignore"
     )
     for p in "${required_paths[@]}"; do
@@ -126,6 +127,10 @@ done
 echo "Property 3 (.gitignore content completeness): done"
 
 # --- Property 4: Invalid module name rejection ---
+# random_invalid_module_name() always returns a non-empty string (leading
+# digit / hyphen / space / dot variants), so empty input is never exercised
+# here as a rejection case — empty input now accepts the suggested default
+# (Requirement 11), not an error.
 for ((i = 0; i < ITERATIONS; i++)); do
     proj="p4-$(random_valid_project_name)-$i"
     mod=$(random_invalid_module_name)
@@ -135,21 +140,17 @@ for ((i = 0; i < ITERATIONS; i++)); do
 done
 echo "Property 4 (invalid module name rejection): done"
 
-# --- Property 5: Empty input rejection ---
+# --- Property 5: Empty project name rejection ---
+# An empty module name is no longer a rejection case as of Requirement 11 —
+# it resolves to the Suggested_Module_Name instead (see Property 16).
 for ((i = 0; i < ITERATIONS; i++)); do
-    proj="p5-$(random_valid_project_name)-$i"
     mod=$(random_valid_module_name)
 
     # Empty project name
     run_scaffold "$WORKDIR" ""$'\n'"$mod"$'\n'
     assert "Property 5: exit non-zero for empty project name" "[ $STATUS -ne 0 ]"
-
-    # Empty module name
-    run_scaffold "$WORKDIR" "$proj"$'\n'""$'\n'
-    assert "Property 5: exit non-zero for empty module name" "[ $STATUS -ne 0 ]"
-    assert "Property 5: no directory created for '$proj' (empty module)" "[ ! -d '$WORKDIR/$proj' ]"
 done
-echo "Property 5 (empty input rejection): done"
+echo "Property 5 (empty project name rejection): done"
 
 # --- Property 6: Pre-existing directory rejection ---
 for ((i = 0; i < ITERATIONS; i++)); do
@@ -271,6 +272,7 @@ if [ "$GIT_IDENTITY_OK" = "1" ]; then
             ".claude/commands/spec-tasks.md"
             ".claude/commands/implement-task.md"
             ".claude/commands/review.md"
+            ".claude/CLAUDE.md"
             ".gitignore"
         )
         for p in "${required_tracked_paths[@]}"; do
@@ -320,6 +322,83 @@ for ((i = 0; i < ITERATIONS; i++)); do
     assert "Property 14: $proj implement-task.md mentions stopping on error without continuing" "grep -q 'stop immediately' '$cmd_file'"
 done
 echo "Property 14 (implement-task.md all-at-once-vs-one-by-one gate content): done"
+
+# --- Property 15: CLAUDE.md agent-loop hygiene content completeness ---
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p15-$(random_valid_project_name)-$i"
+    mod=$(random_valid_module_name)
+    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
+    claude_md="$WORKDIR/$proj/.claude/CLAUDE.md"
+    assert "Property 15: $proj CLAUDE.md has agent-loop hygiene heading" "grep -q '^## Agent-loop and internal-message hygiene$' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions prompt injection pattern example" "grep -qF '\"prompt injection pattern\"' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions stale scheduled check example" "grep -qF '\"stale scheduled check\"' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions loop wakeup example" "grep -qF '\"Claude resuming /loop wakeup\"' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions internal scheduling prompt example" "grep -qF '\"internal scheduling prompt\"' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions task monitor example" "grep -qF '\"task monitor\"' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions already delivered example" "grep -qF '\"already delivered in my last message\"' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions explicit-request exception" "grep -q 'unless the user explicitly asks' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions non-authoritative stale prompts" "grep -q 'non-authoritative' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions not restarting completed work" "grep -q 'Do not restart completed work' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md lists the five completion-report items" "grep -q 'whether anything remains to be done' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md mentions never exposing internal reasoning" "grep -q 'Never expose internal reasoning' '$claude_md'"
+done
+echo "Property 15 (CLAUDE.md agent-loop hygiene content completeness): done"
+
+# --- Property 16: Suggested module name computation and default acceptance ---
+
+# Fixed Examples table from Requirement 11 (camelCase/acronym/digit-prefix/
+# empty-fallback edge cases are unlikely to be hit by random generation, so
+# they're checked against known inputs rather than randomized ones).
+P16_FIXED_DIR="$WORKDIR/.p16fixed"
+mkdir -p "$P16_FIXED_DIR"
+P16_EXAMPLES=(
+    "BasicTest:basic_test"
+    "basic-test:basic_test"
+    "basic_test:basic_test"
+    "HTTPServer:http_server"
+    "MyIOTool:my_io_tool"
+    "123:_123"
+    "...:_module"
+    "_9lives:_9lives"
+)
+for pair in "${P16_EXAMPLES[@]}"; do
+    proj="${pair%%:*}"
+    expected="${pair##*:}"
+    run_scaffold "$P16_FIXED_DIR" "$proj"$'\n\n'
+    assert "Property 16: $proj exits 0 accepting the suggestion" "[ $STATUS -eq 0 ]"
+    assert "Property 16: $proj prompt shows suggestion [$expected]" "echo \"\$OUTPUT\" | grep -qF \"Enter Python module name [$expected]:\""
+    assert "Property 16: $proj resolves to suggested module name $expected" "[ -d '$P16_FIXED_DIR/$proj/src/$expected' ]"
+    rm -rf "${P16_FIXED_DIR:?}/${proj:?}"
+done
+echo "Property 16 (fixed examples table): done"
+
+# Randomized: accepted default is always a valid Python identifier, is
+# deterministic for a given project name, and a typed override is honored.
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p16-$(random_valid_project_name)-$i"
+    dir_a="$WORKDIR/.p16a"
+    dir_b="$WORKDIR/.p16b"
+    mkdir -p "$dir_a" "$dir_b"
+
+    run_scaffold "$dir_a" "$proj"$'\n\n'
+    assert "Property 16: $proj (run A) exits 0" "[ $STATUS -eq 0 ]"
+    suggestion_a=$(find "$dir_a/$proj/src" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | xargs -n1 basename 2>/dev/null)
+
+    run_scaffold "$dir_b" "$proj"$'\n\n'
+    assert "Property 16: $proj (run B) exits 0" "[ $STATUS -eq 0 ]"
+    suggestion_b=$(find "$dir_b/$proj/src" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | xargs -n1 basename 2>/dev/null)
+
+    assert "Property 16: $proj suggestion '$suggestion_a' is a valid Python identifier" "printf '%s' '$suggestion_a' | grep -Eq '^[a-zA-Z_][a-zA-Z0-9_]*$'"
+    assert "Property 16: $proj suggestion is deterministic ('$suggestion_a' == '$suggestion_b')" "[ \"$suggestion_a\" = \"$suggestion_b\" ]"
+
+    rm -rf "$dir_a" "$dir_b"
+
+    override="ov_$(random_valid_module_name)"
+    run_scaffold "$WORKDIR" "$proj"$'\n'"$override"$'\n'
+    assert "Property 16: $proj typed override '$override' used verbatim" "[ -d '$WORKDIR/$proj/src/$override' ]"
+    rm -rf "${WORKDIR:?}/${proj:?}"
+done
+echo "Property 16 (suggested module name computation and default acceptance): done"
 
 echo ""
 if [ "$FAILURES" -eq 0 ]; then

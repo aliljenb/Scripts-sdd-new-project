@@ -42,7 +42,7 @@ run_in_workdir $'demo-project\ndemo_module\n'; STATUS=$?
 
 assert "new-sdd-project.sh exits 0 given valid piped input" "[ $STATUS -eq 0 ]"
 assert "new-sdd-project.sh prompts for project name" "echo \"\$OUTPUT\" | grep -q 'Enter project name:'"
-assert "new-sdd-project.sh prompts for module name" "echo \"\$OUTPUT\" | grep -q 'Enter Python module name:'"
+assert "new-sdd-project.sh prompts for module name" "echo \"\$OUTPUT\" | grep -q 'Enter Python module name'"
 
 # --- Task 2: input validation ---
 
@@ -51,10 +51,29 @@ run_in_workdir $'\nmodule\n'; STATUS=$?
 assert "empty project name exits non-zero" "[ $STATUS -ne 0 ]"
 assert "empty project name prints error" "echo \"\$OUTPUT\" | grep -qi 'project name cannot be empty'"
 
-# Empty module name
-run_in_workdir $'project\n\n'; STATUS=$?
-assert "empty module name exits non-zero" "[ $STATUS -ne 0 ]"
-assert "empty module name prints error" "echo \"\$OUTPUT\" | grep -qi 'module name cannot be empty'"
+# --- Task 37/38: module name suggestion ---
+
+# Empty module name input accepts the suggested default (Requirement 11)
+run_in_workdir $'BasicTest\n\n'; STATUS=$?
+assert "empty module name input exits 0 (accepts suggestion)" "[ $STATUS -eq 0 ]"
+assert "module name prompt shows bracketed suggestion" "echo \"\$OUTPUT\" | grep -q 'Enter Python module name \[basic_test\]:'"
+assert "empty module name input resolves to suggested module name" "[ -d '$WORKDIR/BasicTest/src/basic_test' ]"
+assert "empty module name input creates matching test file" "[ -f '$WORKDIR/BasicTest/tests/test_basic_test.py' ]"
+
+# Non-empty module name input overrides the suggestion
+run_in_workdir $'HTTPServer\ncustom_name\n'; STATUS=$?
+assert "typed module name override exits 0" "[ $STATUS -eq 0 ]"
+assert "typed module name override is used verbatim" "[ -d '$WORKDIR/HTTPServer/src/custom_name' ]"
+assert "typed module name override does not use the suggestion" "[ ! -d '$WORKDIR/HTTPServer/src/http_server' ]"
+
+# Degenerate project names still produce a valid suggestion
+run_in_workdir $'123\n\n'; STATUS=$?
+assert "digit-leading project name exits 0" "[ $STATUS -eq 0 ]"
+assert "digit-leading project name suggestion is prefixed with underscore" "[ -d '$WORKDIR/123/src/_123' ]"
+
+run_in_workdir $'...\n\n'; STATUS=$?
+assert "symbol-only project name exits 0" "[ $STATUS -eq 0 ]"
+assert "symbol-only project name falls back to _module" "[ -d '$WORKDIR/.../src/_module' ]"
 
 # Invalid Python identifier (module name)
 run_in_workdir $'project\nnot-valid\n'; STATUS=$?
@@ -145,6 +164,24 @@ assert "implement-task.md has Before implementing heading" "grep -q '^## Before 
 assert "implement-task.md mentions AskUserQuestion tool" "grep -q 'AskUserQuestion' '$CMD_DIR/implement-task.md'"
 assert "implement-task.md references skipping the question for one remaining task" "grep -q 'exactly one unchecked task remains' '$CMD_DIR/implement-task.md'"
 assert "implement-task.md references stopping on error without continuing" "grep -q 'stop immediately' '$CMD_DIR/implement-task.md'"
+
+# --- Task 35: .claude/CLAUDE.md agent-loop hygiene guidance ---
+
+CLAUDE_MD="$WORKDIR/tree-project/.claude/CLAUDE.md"
+
+assert "creates .claude/CLAUDE.md" "[ -f '$CLAUDE_MD' ]"
+assert "CLAUDE.md has agent-loop hygiene heading" "grep -q '^## Agent-loop and internal-message hygiene$' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions prompt injection pattern example" "grep -qF '\"prompt injection pattern\"' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions stale scheduled check example" "grep -qF '\"stale scheduled check\"' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions loop wakeup example" "grep -qF '\"Claude resuming /loop wakeup\"' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions internal scheduling prompt example" "grep -qF '\"internal scheduling prompt\"' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions task monitor example" "grep -qF '\"task monitor\"' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions already delivered example" "grep -qF '\"already delivered in my last message\"' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions explicit-request exception" "grep -q 'unless the user explicitly asks' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions non-authoritative stale prompts" "grep -q 'non-authoritative' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions not restarting completed work" "grep -q 'Do not restart completed work' '$CLAUDE_MD'"
+assert "CLAUDE.md lists the five completion-report items" "grep -q 'whether anything remains to be done' '$CLAUDE_MD'"
+assert "CLAUDE.md mentions never exposing internal reasoning" "grep -q 'Never expose internal reasoning' '$CLAUDE_MD'"
 
 # --- Task 7: .gitignore generation ---
 
