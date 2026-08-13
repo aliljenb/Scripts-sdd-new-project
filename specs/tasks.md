@@ -253,3 +253,16 @@
 - [x] 39.2 Run the script interactively again; enter project name `HTTPServer`, then type an explicit override (e.g. `custom_name`) instead of accepting the suggestion; confirm the generated project uses `src/custom_name/`, not `src/http_server/`
 - [x] 39.3 Run the script interactively a third time with a project name that sanitizes to a digit-leading or empty result (e.g. `123` or `...`); confirm the displayed suggestion is `_123` or `_module` respectively
 - [x] 39.4 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass
+
+## Task 40: Replace `.claude/CLAUDE.md` content with development discipline guidance
+
+- [x] 40.1 In `new-sdd-project.sh`, replace the `cat > "$PROJECT_NAME/.claude/CLAUDE.md"` heredoc body with the `## Development discipline` content verbatim (the ten bullets: no code changes unless explicitly asked; inspect-first-then-stop-for-review on investigation/review tasks; no commit/push unless explicitly instructed; preserve unrelated working-tree changes; no reverting user changes unless explicitly instructed; keep scope aligned with the approved task; no inventing missing behavior/abstractions before inspecting existing code; distinguish unverified changes from verified behavior; prefer small incremental changes with explicit verification; no unrelated work from stale/duplicated/auto-generated task prompts), per updated `specs/design.md`'s `.claude/CLAUDE.md` component section, keeping the heredoc quoted (`<< 'EOF'`) so no variable substitution occurs
+- [x] 40.2 In `tests/test_scaffold.sh`, replace the Task 35 CLAUDE.md assertions (agent-loop-hygiene heading and six example-message checks) with assertions for the `## Development discipline` heading and each of the ten bullets above
+- [x] 40.3 In `tests/test_properties.sh`, replace the Property 15 assertions (agent-loop-hygiene heading and six example-message checks) with assertions for the `## Development discipline` heading and each of the ten bullets above, and update the section comment and "done" echo label to reference development discipline instead of agent-loop hygiene
+- [x] 40.4 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the updated Property 15 test
+
+## Task 41: Manual verification — CLAUDE.md development discipline guidance
+
+- [x] 41.1 Run the script interactively end-to-end; open the generated `.claude/CLAUDE.md` and confirm its content matches `specs/design.md`'s `.claude/CLAUDE.md` component section verbatim
+- [x] 41.2 Confirm the generated directory tree (via the script's own success-report output) still includes `.claude/CLAUDE.md`
+- [x] 41.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass

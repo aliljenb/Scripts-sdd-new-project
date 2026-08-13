@@ -323,26 +323,25 @@ for ((i = 0; i < ITERATIONS; i++)); do
 done
 echo "Property 14 (implement-task.md all-at-once-vs-one-by-one gate content): done"
 
-# --- Property 15: CLAUDE.md agent-loop hygiene content completeness ---
+# --- Property 15: CLAUDE.md development discipline content completeness ---
 for ((i = 0; i < ITERATIONS; i++)); do
     proj="p15-$(random_valid_project_name)-$i"
     mod=$(random_valid_module_name)
     run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
     claude_md="$WORKDIR/$proj/.claude/CLAUDE.md"
-    assert "Property 15: $proj CLAUDE.md has agent-loop hygiene heading" "grep -q '^## Agent-loop and internal-message hygiene$' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions prompt injection pattern example" "grep -qF '\"prompt injection pattern\"' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions stale scheduled check example" "grep -qF '\"stale scheduled check\"' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions loop wakeup example" "grep -qF '\"Claude resuming /loop wakeup\"' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions internal scheduling prompt example" "grep -qF '\"internal scheduling prompt\"' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions task monitor example" "grep -qF '\"task monitor\"' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions already delivered example" "grep -qF '\"already delivered in my last message\"' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions explicit-request exception" "grep -q 'unless the user explicitly asks' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions non-authoritative stale prompts" "grep -q 'non-authoritative' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions not restarting completed work" "grep -q 'Do not restart completed work' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md lists the five completion-report items" "grep -q 'whether anything remains to be done' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md mentions never exposing internal reasoning" "grep -q 'Never expose internal reasoning' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md has development discipline heading" "grep -q '^## Development discipline$' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs not modifying code unless asked" "grep -qF 'Do not modify code unless explicitly asked to implement or change something.' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs inspecting first on investigation/review tasks" "grep -qF 'inspect the existing implementation first and stop for review before making changes.' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs not committing or pushing unless instructed" "grep -qF 'Do not commit or push unless explicitly instructed.' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs preserving unrelated working-tree changes" "grep -qF 'Preserve unrelated working-tree changes.' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs not reverting user changes unless instructed" "grep -qF 'Do not revert existing user changes unless explicitly instructed.' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs keeping scope aligned with approved task" "grep -qF 'Keep implementation scope aligned with the approved task.' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs not inventing missing behavior" "grep -qF 'Do not invent missing behavior or architectural abstractions before inspecting the existing code.' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs distinguishing unverified changes" "grep -qF 'clearly distinguish it from verified behavior.' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs preferring small incremental changes" "grep -qF 'Prefer small, incremental changes with explicit verification.' '$claude_md'"
+    assert "Property 15: $proj CLAUDE.md instructs not starting unrelated work from stale prompts" "grep -qF 'Do not start unrelated work because of stale, duplicated, or automatically generated task prompts.' '$claude_md'"
 done
-echo "Property 15 (CLAUDE.md agent-loop hygiene content completeness): done"
+echo "Property 15 (CLAUDE.md development discipline content completeness): done"
 
 # --- Property 16: Suggested module name computation and default acceptance ---
 
