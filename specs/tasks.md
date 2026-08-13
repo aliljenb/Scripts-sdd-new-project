@@ -211,6 +211,45 @@
 
 ## Task 34: Manual verification — expanded .gitignore
 
-- [ ] 34.1 Run the script interactively end-to-end; diff the generated `.gitignore` against `specs/design.md`'s `.gitignore Content` block and confirm they match exactly
-- [ ] 34.2 Confirm the previously-required core patterns (`__pycache__/`, `*.py[cod]`, `.eggs/`, `*.egg-info/`, `dist/`, `build/`, `.venv/`, `venv/`, `.pytest_cache/`, `.mypy_cache/`, `.DS_Store`, `.idea/`) are all still present in the expanded file
-- [ ] 34.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass
+- [x] 34.1 Run the script interactively end-to-end; diff the generated `.gitignore` against `specs/design.md`'s `.gitignore Content` block and confirm they match exactly
+- [x] 34.2 Confirm the previously-required core patterns (`__pycache__/`, `*.py[cod]`, `.eggs/`, `*.egg-info/`, `dist/`, `build/`, `.venv/`, `venv/`, `.pytest_cache/`, `.mypy_cache/`, `.DS_Store`, `.idea/`) are all still present in the expanded file
+- [x] 34.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass
+
+## Task 35: Implement file generation — `.claude/CLAUDE.md` agent-loop hygiene guidance
+
+- [x] 35.1 In `new-sdd-project.sh`, add a `cat > "$PROJECT_NAME/.claude/CLAUDE.md"` heredoc (quoted, `<< 'EOF'`, no variable substitution) writing the `## Agent-loop and internal-message hygiene` content verbatim, per `specs/design.md`'s `.claude/CLAUDE.md` component section
+- [x] 35.2 Add `tests/test_scaffold.sh` assertions: `.claude/CLAUDE.md` exists and contains the `## Agent-loop and internal-message hygiene` heading, the six example messages (`"prompt injection pattern"`, `"stale scheduled check"`, `"Claude resuming /loop wakeup"`, `"internal scheduling prompt"`, `"task monitor"`, `"already delivered in my last message"`), the explicit-user-request exception clause, the non-authoritative stale-prompt instruction, the five-item completion report list, and the "never expose internal reasoning" instruction
+- [x] 35.3 Update the Property 2 test (Complete directory structure invariant) in `tests/test_properties.sh` to also assert the existence of `.claude/CLAUDE.md`
+- [x] 35.4 Write property test: CLAUDE.md agent-loop hygiene content completeness (Property 15)
+  - **Feature: sdd-project-scaffold, Property 15: For any valid input pair, the generated `.claude/CLAUDE.md` contains the `## Agent-loop and internal-message hygiene` heading and its required content (suppressed internal-commentary categories, the six example messages, the explicit-request exception, non-authoritative stale-prompt handling, the five-item completion report limit, and no exposed internal reasoning/task-routing commentary), byte-for-byte identical across every generated project**
+- [x] 35.5 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 15 test and the updated Property 2 test
+
+## Task 36: Manual verification — CLAUDE.md agent-loop hygiene guidance
+
+- [x] 36.1 Run the script interactively end-to-end; open the generated `.claude/CLAUDE.md` and confirm its content matches `specs/design.md`'s `.claude/CLAUDE.md` component section verbatim
+- [x] 36.2 Confirm the generated directory tree (via the script's own success-report output) includes `.claude/CLAUDE.md`
+- [x] 36.3 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass
+
+## Task 37: Implement module name suggestion algorithm and restructured prompting
+
+- [x] 37.1 In `new-sdd-project.sh`, add the `sanitize_module_name()` function per `specs/design.md`'s Module Name Suggestion component: two `sed -E` passes for camelCase word-boundary splitting (lower/digit→Upper, then an uppercase run→Upper+lower, so acronym runs stay one segment), replace non-alphanumeric/non-underscore characters with `_`, collapse repeated underscores, lowercase via `tr 'A-Z' 'a-z'`, strip a trailing underscore unconditionally and a leading one unless the original input already started with `_`, fall back to `_module` if the result is empty, and prepend `_` if the result starts with a digit
+- [x] 37.2 Restructure the Prompt stage in `new-sdd-project.sh`: read `PROJECT_NAME`; immediately run the existing empty-name and path-safety checks on it (moved ahead of the module-name prompt); compute `SUGGESTED_MODULE_NAME=$(sanitize_module_name "$PROJECT_NAME")`; prompt `Enter Python module name [$SUGGESTED_MODULE_NAME]:`; read into `MODULE_NAME_INPUT`; resolve `MODULE_NAME` to `$SUGGESTED_MODULE_NAME` when `MODULE_NAME_INPUT` is empty, otherwise to `$MODULE_NAME_INPUT`
+- [x] 37.3 Remove the old standalone "empty module name" error check (`Error: Module name cannot be empty.`) from `new-sdd-project.sh` — module-name emptiness at the prompt is no longer an error path. Keep the existing Python-identifier regex validation running against the resolved `MODULE_NAME`, unconditionally (Requirement 11.6)
+- [x] 37.4 Update the directory-tree/prompt-flow comments near the top of `new-sdd-project.sh` to reflect the new two-stage prompt-and-validate ordering
+
+## Task 38: Write tests for module name suggestion
+
+- [x] 38.1 In `tests/test_scaffold.sh`, update the existing "empty module name" test case: replace the exit-non-zero/error-message assertions with assertions that empty module-name input exits 0 and resolves `MODULE_NAME` to the computed suggestion (e.g. project name `BasicTest` with an empty second line produces `src/basic_test/__init__.py` and `tests/test_basic_test.py`)
+- [x] 38.2 Add `tests/test_scaffold.sh` assertions: the module-name prompt text contains the bracketed suggestion (e.g. `grep -q 'Enter Python module name \[basic_test\]:'` for project name `BasicTest`), and a non-empty typed override (e.g. `custom_module`) is used verbatim instead of the suggestion
+- [x] 38.3 Write property test: Suggested module name computation and default acceptance (Property 16) in `tests/test_properties.sh` — assert the fixed Examples table from Requirement 11 (`BasicTest`→`basic_test`, `basic-test`→`basic_test`, `basic_test`→`basic_test`, `HTTPServer`→`http_server`, `MyIOTool`→`my_io_tool`, `123`→`_123`, `...`→`_module`, `_9lives`→`_9lives`) exactly, plus randomized valid-project-name cases asserting the accepted default always matches `^[a-zA-Z_][a-zA-Z0-9_]*$`, is deterministic across repeated runs for the same project name, and that a randomized non-empty override is used verbatim in place of the suggestion
+  - **Feature: sdd-project-scaffold, Property 16: For any valid project name, the script computes a Suggested_Module_Name that is a valid Python identifier, deterministic, and shown as the module-name prompt's default; empty input resolves MODULE_NAME to that suggestion, non-empty input resolves it to the typed override**
+- [x] 38.4 Update `tests/test_properties.sh`'s Property 5 test: rename to "Empty project name rejection", remove the empty-module-name rejection assertions, and keep only the empty-project-name case
+- [x] 38.5 Update `tests/test_properties.sh`'s Property 4 test (Invalid module name rejection) if needed so its randomized invalid-module-name generator only produces non-empty invalid strings (already the case via `random_invalid_module_name`), confirming empty input is never exercised as a rejection case there
+- [x] 38.6 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass, including the new Property 16 test and the updated Property 4/5 tests
+
+## Task 39: Manual verification — module name suggestion
+
+- [x] 39.1 Run the script interactively; enter project name `BasicTest`, confirm the module-name prompt displays `[basic_test]`, press Enter with no input, and confirm the generated project has `src/basic_test/` and `tests/test_basic_test.py`
+- [x] 39.2 Run the script interactively again; enter project name `HTTPServer`, then type an explicit override (e.g. `custom_name`) instead of accepting the suggestion; confirm the generated project uses `src/custom_name/`, not `src/http_server/`
+- [x] 39.3 Run the script interactively a third time with a project name that sanitizes to a digit-leading or empty result (e.g. `123` or `...`); confirm the displayed suggestion is `_123` or `_module` respectively
+- [x] 39.4 Re-run `tests/test_scaffold.sh` and `tests/test_properties.sh` and confirm all assertions pass

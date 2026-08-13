@@ -13,6 +13,7 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 - **Project_Manifest**: A `pyproject.toml` file at the Project_Root level that declares `pytest` as a development dependency and registers the `smoke` pytest marker
 - **Spec_Templates**: Markdown template files (`requirements.md`, `design.md`, `tasks.md`) placed in the `specs/` directory following Kiro-style conventions
 - **Claude_Commands**: Markdown files placed in `.claude/commands/` that define Claude CLI slash commands for the SDD lifecycle (`spec-requirements`, `spec-design`, `spec-tasks`, `implement-task`, `review`)
+- **Suggested_Module_Name**: A valid Python identifier computed by the Script from the user-provided project name, offered as the pre-filled default value at the Python module name prompt (see Requirement 11)
 
 ## Requirements
 
@@ -23,9 +24,9 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 #### Acceptance Criteria
 
 1. WHEN the Script is executed, THE Script SHALL prompt the user for a project name via standard input
-2. WHEN the Script is executed, THE Script SHALL prompt the user for a Python module name via standard input
+2. WHEN the project name has been prompted for and validated, THE Script SHALL prompt the user for a Python module name via standard input, displaying the Suggested_Module_Name (Requirement 11) as the pre-filled default in that prompt
 3. WHEN the user provides a project name, THE Script SHALL use that value as the Project_Root directory name
-4. WHEN the user provides a module name, THE Script SHALL use that value as the Python_Package directory name within `src/`
+4. WHEN the user submits a non-empty value at the Python module name prompt, THE Script SHALL use that typed value as the Python_Package directory name within `src/`, in place of the Suggested_Module_Name
 
 ### Requirement 2: Input validation
 
@@ -34,7 +35,7 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 #### Acceptance Criteria
 
 1. IF the user provides an empty project name, THEN THE Script SHALL display an error message and exit with a non-zero status code
-2. IF the user provides an empty module name, THEN THE Script SHALL display an error message and exit with a non-zero status code
+2. IF the user submits empty input (presses Enter without typing a value) at the Python module name prompt, THEN THE Script SHALL treat this as acceptance of the Suggested_Module_Name (Requirement 11) rather than as an error, since a valid non-empty suggestion is always available by that point in the prompt flow
 3. IF the user provides a module name that is not a valid Python identifier (does not match `^[a-zA-Z_][a-zA-Z0-9_]*$`), THEN THE Script SHALL display an error message and exit with a non-zero status code
 4. IF a directory matching the Project_Root name already exists in the current working directory, THEN THE Script SHALL display an error message and exit with a non-zero status code
 5. THE Script SHALL perform all validation before creating any files or directories
@@ -134,3 +135,51 @@ A Bash script for macOS that scaffolds a new spec-driven development (SDD) proje
 5. THE Script SHALL rely on the user's existing global git configuration (`user.name`/`user.email`) for the commit author identity and SHALL NOT set or override git identity configuration
 6. IF the `git` command is not available on the system, THEN THE Script SHALL skip repository initialization and commit, display a warning message, and still exit with status code 0
 7. IF `git init`, `git add`, or `git commit` fails for any reason (e.g. missing git identity configuration), THEN THE Script SHALL display a warning message and still exit with status code 0, since the file structure was already created successfully
+
+### Requirement 10: Agent-loop and internal-message hygiene in CLAUDE.md
+
+**User Story:** As a developer, I want the generated project to include a `CLAUDE.md` file with agent-loop and internal-message hygiene guidance, so that Claude Code sessions working in the generated project don't leak internal task-scheduling, loop-wakeup, or prompt-injection-analysis commentary into their user-facing responses.
+
+#### Acceptance Criteria
+
+1. WHEN the Project_Root is created, THE Script SHALL create a `CLAUDE.md` file inside the `.claude/` directory (i.e. `.claude/CLAUDE.md`)
+2. THE `.claude/CLAUDE.md` file SHALL contain a `## Agent-loop and internal-message hygiene` heading
+3. THE `.claude/CLAUDE.md` file SHALL instruct that internal task-monitoring, scheduler, loop-wakeup, prompt-injection-analysis, and stale-task commentary SHALL NOT be surfaced in the user-facing response
+4. THE `.claude/CLAUDE.md` file SHALL list, as examples of messages not to report, at least: "prompt injection pattern", "stale scheduled check", "Claude resuming /loop wakeup", "internal scheduling prompt", "task monitor", and "already delivered in my last message"
+5. THE `.claude/CLAUDE.md` file SHALL state that the restriction in Criterion 3 does not apply when the user explicitly asks for an explanation of the agent's internal execution
+6. THE `.claude/CLAUDE.md` file SHALL instruct that stale, duplicated, or internally generated task prompts SHALL be treated as non-authoritative, and that completed work SHALL NOT be restarted because of them
+7. THE `.claude/CLAUDE.md` file SHALL instruct that, when a task is complete, the report SHALL be limited to exactly these five items: what was completed, relevant verification/test results, files changed, commit status, and whether anything remains to be done
+8. THE `.claude/CLAUDE.md` file SHALL instruct that internal reasoning or internal task-routing commentary SHALL NOT be exposed
+9. THE content of `.claude/CLAUDE.md` SHALL be static (no variable substitution) and identical across every project generated by the Script
+
+### Requirement 11: Suggested Python module name from the project name
+
+**User Story:** As a developer, I want the script to suggest a valid Python module name based on the project name I entered, so that I don't have to manually retype and reformat the module name by hand when it can be derived automatically.
+
+#### Acceptance Criteria
+
+1. AFTER the project name has been prompted for and has passed validation (Requirement 2.1), THE Script SHALL compute a Suggested_Module_Name by sanitizing the project name into a valid Python identifier, before prompting for the module name
+2. THE sanitization in Criterion 1 SHALL, in order:
+   a. Insert an underscore at camelCase word boundaries — before an uppercase letter that is preceded by a lowercase letter or digit, and before the final uppercase letter of a run of two or more consecutive uppercase letters when that letter is followed by a lowercase letter, so that acronym runs are treated as a single segment (e.g. `HTTPServer` → `HTTP_Server`)
+   b. Replace every character that is not a letter, digit, or underscore with an underscore
+   c. Collapse runs of two or more consecutive underscores into a single underscore
+   d. Convert the entire string to lowercase
+   e. Strip any leading or trailing underscore produced by steps (a)–(c), except that a single leading underscore already present in the original project name SHALL be preserved
+3. IF the sanitized result from Criterion 2 begins with a digit, THEN THE Script SHALL prepend a single underscore to it (e.g. project name `123` → Suggested_Module_Name `_123`)
+4. IF the sanitized result from Criterion 2 is an empty string, THEN THE Script SHALL use the fixed fallback value `_module` as the Suggested_Module_Name
+5. THE Script SHALL display the Suggested_Module_Name to the user as the pre-filled default in the Python module name prompt (e.g. `Enter Python module name [basic_test]:`)
+6. THE resolved module name value — whether the accepted Suggested_Module_Name or a typed override (Requirement 1.4) — SHALL still be subject to the existing Python-identifier validation (Requirement 2.3)
+7. THE Suggested_Module_Name computation SHALL be deterministic: for a given project name it SHALL always produce the same Suggested_Module_Name
+
+##### Examples
+
+| Project name | Suggested_Module_Name |
+|---|---|
+| `BasicTest` | `basic_test` |
+| `basic-test` | `basic_test` |
+| `basic_test` | `basic_test` |
+| `HTTPServer` | `http_server` |
+| `MyIOTool` | `my_io_tool` |
+| `123` | `_123` |
+| `...` | `_module` |
+| `_9lives` | `_9lives` |
