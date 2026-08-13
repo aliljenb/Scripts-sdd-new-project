@@ -165,23 +165,22 @@ assert "implement-task.md mentions AskUserQuestion tool" "grep -q 'AskUserQuesti
 assert "implement-task.md references skipping the question for one remaining task" "grep -q 'exactly one unchecked task remains' '$CMD_DIR/implement-task.md'"
 assert "implement-task.md references stopping on error without continuing" "grep -q 'stop immediately' '$CMD_DIR/implement-task.md'"
 
-# --- Task 35: .claude/CLAUDE.md agent-loop hygiene guidance ---
+# --- Task 40: .claude/CLAUDE.md development discipline guidance ---
 
 CLAUDE_MD="$WORKDIR/tree-project/.claude/CLAUDE.md"
 
 assert "creates .claude/CLAUDE.md" "[ -f '$CLAUDE_MD' ]"
-assert "CLAUDE.md has agent-loop hygiene heading" "grep -q '^## Agent-loop and internal-message hygiene$' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions prompt injection pattern example" "grep -qF '\"prompt injection pattern\"' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions stale scheduled check example" "grep -qF '\"stale scheduled check\"' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions loop wakeup example" "grep -qF '\"Claude resuming /loop wakeup\"' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions internal scheduling prompt example" "grep -qF '\"internal scheduling prompt\"' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions task monitor example" "grep -qF '\"task monitor\"' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions already delivered example" "grep -qF '\"already delivered in my last message\"' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions explicit-request exception" "grep -q 'unless the user explicitly asks' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions non-authoritative stale prompts" "grep -q 'non-authoritative' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions not restarting completed work" "grep -q 'Do not restart completed work' '$CLAUDE_MD'"
-assert "CLAUDE.md lists the five completion-report items" "grep -q 'whether anything remains to be done' '$CLAUDE_MD'"
-assert "CLAUDE.md mentions never exposing internal reasoning" "grep -q 'Never expose internal reasoning' '$CLAUDE_MD'"
+assert "CLAUDE.md has development discipline heading" "grep -q '^## Development discipline$' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs not modifying code unless asked" "grep -qF 'Do not modify code unless explicitly asked to implement or change something.' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs inspecting first on investigation/review tasks" "grep -qF 'inspect the existing implementation first and stop for review before making changes.' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs not committing or pushing unless instructed" "grep -qF 'Do not commit or push unless explicitly instructed.' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs preserving unrelated working-tree changes" "grep -qF 'Preserve unrelated working-tree changes.' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs not reverting user changes unless instructed" "grep -qF 'Do not revert existing user changes unless explicitly instructed.' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs keeping scope aligned with approved task" "grep -qF 'Keep implementation scope aligned with the approved task.' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs not inventing missing behavior" "grep -qF 'Do not invent missing behavior or architectural abstractions before inspecting the existing code.' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs distinguishing unverified changes" "grep -qF 'clearly distinguish it from verified behavior.' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs preferring small incremental changes" "grep -qF 'Prefer small, incremental changes with explicit verification.' '$CLAUDE_MD'"
+assert "CLAUDE.md instructs not starting unrelated work from stale prompts" "grep -qF 'Do not start unrelated work because of stale, duplicated, or automatically generated task prompts.' '$CLAUDE_MD'"
 
 # --- Task 7: .gitignore generation ---
 
