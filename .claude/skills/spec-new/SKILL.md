@@ -14,8 +14,9 @@ Scaffold a new spec for the feature: **$ARGUMENTS**
    - `${CLAUDE_PROJECT_DIR}/.claude/skills/spec-requirements/template.md` → `specs/$ARGUMENTS/requirements.md`
    - `${CLAUDE_PROJECT_DIR}/.claude/skills/spec-design/template.md` → `specs/$ARGUMENTS/design.md`
    - `${CLAUDE_PROJECT_DIR}/.claude/skills/spec-tasks/template.md` → `specs/$ARGUMENTS/tasks.md`
-4. In each copied file, replace `[feature-name]` with $ARGUMENTS.
-5. Confirm the folder is ready and tell the user the next step is
+4. Create an empty `specs/$ARGUMENTS/prompts.txt` file.
+5. In each copied file, replace `[feature-name]` with $ARGUMENTS.
+6. Confirm the folder is ready and tell the user the next step is
    `/spec-requirements $ARGUMENTS`.
 
 Do NOT fill in any content yet — that is the next phase.

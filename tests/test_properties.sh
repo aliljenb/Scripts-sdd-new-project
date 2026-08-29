@@ -1,7 +1,8 @@
 #!/bin/bash
-# Property-based tests for new-sdd-project.sh, mapped to the 13 correctness
-# properties defined in specs/design.md. Each property is checked against
-# a batch of randomly generated inputs rather than a single fixed example.
+# Property-based tests for new-sdd-project.sh, mapped to the correctness
+# properties in specs/load-template/design.md. Each property is checked
+# against a batch of randomly generated inputs rather than a single fixed
+# example.
 
 set -u
 
@@ -11,7 +12,14 @@ FAILURES=0
 ITERATIONS="${ITERATIONS:-20}"
 
 WORKDIR=$(mktemp -d)
-trap 'rm -rf "$WORKDIR"' EXIT
+FIXTURE_DIR=$(mktemp -d)
+trap 'rm -rf "$WORKDIR" "$FIXTURE_DIR"' EXIT
+
+# Fixture template repo stands in for the real GitHub template so the suite
+# runs offline/deterministically (specs/load-template/design.md § Testing
+# Strategy).
+"$SCRIPT_DIR/tests/fixtures/build_template_fixture.sh" "$FIXTURE_DIR/template"
+export SDD_TEMPLATE_URL="$FIXTURE_DIR/template"
 
 assert() {
     local description="$1"
@@ -94,37 +102,29 @@ for ((i = 0; i < ITERATIONS; i++)); do
     required_paths=(
         "src/$mod/__init__.py"
         "tests/__init__.py"
-        "tests/test_$mod.py"
+        "tests/test_python_module.py"
         "pyproject.toml"
-        "specs/requirements.md"
-        "specs/design.md"
-        "specs/tasks.md"
-        ".claude/commands/spec-requirements.md"
-        ".claude/commands/spec-design.md"
-        ".claude/commands/spec-tasks.md"
-        ".claude/commands/implement-task.md"
-        ".claude/commands/review.md"
-        ".claude/CLAUDE.md"
+        "README.md"
+        ".claude/skills/spec-requirements/SKILL.md"
         ".gitignore"
     )
     for p in "${required_paths[@]}"; do
         assert "Property 2: $proj contains $p" "[ -f '$root/$p' ]"
     done
+    assert "Property 2: $proj has no leftover src/python_module" "[ ! -d '$root/src/python_module' ]"
 done
 echo "Property 2 (complete directory structure invariant): done"
 
-# --- Property 3: .gitignore content completeness ---
-patterns=('__pycache__/' '\*\.py\[cod\]' '\.eggs/' '\*\.egg-info/' 'dist/' 'build/' '\.venv/' '^venv/$' '\.pytest_cache/' '\.mypy_cache/' '\.DS_Store' '\.idea/' \
-    '\*\.class' 'target/' 'node_modules/' '\.next/' '\.vercel' '^\.env$' '\*\.iml' '\.vscode/\*' '\.Spotlight-V100' '\*\.log')
+# --- Property 3: template-sourced files land verbatim ---
 for ((i = 0; i < ITERATIONS; i++)); do
     proj="p3-$(random_valid_project_name)-$i"
     mod=$(random_valid_module_name)
     run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
-    for pattern in "${patterns[@]}"; do
-        assert "Property 3: $proj .gitignore contains $pattern" "grep -q -- '$pattern' '$WORKDIR/$proj/.gitignore'"
-    done
+    root="$WORKDIR/$proj"
+    assert "Property 3: $proj .gitignore matches the fixture verbatim" "diff -q '$FIXTURE_DIR/template/.gitignore' '$root/.gitignore' >/dev/null 2>&1"
+    assert "Property 3: $proj .claude/skills/ matches the fixture verbatim" "diff -qr '$FIXTURE_DIR/template/.claude/skills' '$root/.claude/skills' >/dev/null 2>&1"
 done
-echo "Property 3 (.gitignore content completeness): done"
+echo "Property 3 (template-sourced files land verbatim): done"
 
 # --- Property 4: Invalid module name rejection ---
 # random_invalid_module_name() always returns a non-empty string (leading
@@ -178,23 +178,6 @@ for ((i = 0; i < ITERATIONS; i++)); do
 done
 echo "Property 7 (success output contains structure): done"
 
-# --- Property 8: spec-requirements.md control-question gate content ---
-for ((i = 0; i < ITERATIONS; i++)); do
-    proj="p8-$(random_valid_project_name)-$i"
-    mod=$(random_valid_module_name)
-    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
-    cmd_file="$WORKDIR/$proj/.claude/commands/spec-requirements.md"
-    assert "Property 8: $proj spec-requirements.md has gate heading" "grep -q '^## Before writing or editing anything$' '$cmd_file'"
-    assert "Property 8: $proj spec-requirements.md mentions stopping to ask on ambiguity" "grep -q 'stop and ask control questions' '$cmd_file'"
-    assert "Property 8: $proj spec-requirements.md mentions one question at a time" "grep -q 'one question at a time' '$cmd_file'"
-    assert "Property 8: $proj spec-requirements.md mentions 2-4 mutually exclusive options" "grep -q '2-4 concrete, mutually exclusive' '$cmd_file'"
-    assert "Property 8: $proj spec-requirements.md mentions Other free text" "grep -qi '\"Other\" with free text' '$cmd_file'"
-    assert "Property 8: $proj spec-requirements.md mentions AskUserQuestion tool" "grep -q 'AskUserQuestion' '$cmd_file'"
-    assert "Property 8: $proj spec-requirements.md mentions A/B/C/D fallback" "grep -q 'A/B/C/D' '$cmd_file'"
-    assert "Property 8: $proj spec-requirements.md mentions withholding edits until resolved" "grep -q 'blocking' '$cmd_file'"
-done
-echo "Property 8 (spec-requirements.md control-question gate content): done"
-
 # --- Property 9: Test package validity ---
 if command -v pytest >/dev/null 2>&1; then
     for ((i = 0; i < ITERATIONS; i++)); do
@@ -203,10 +186,7 @@ if command -v pytest >/dev/null 2>&1; then
         run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
         root="$WORKDIR/$proj"
         assert "Property 9: $proj tests/__init__.py exists" "[ -f '$root/tests/__init__.py' ]"
-        assert "Property 9: $proj tests/test_$mod.py exists" "[ -f '$root/tests/test_$mod.py' ]"
-        assert "Property 9: $proj tests/test_$mod.py defines a test_ function" "grep -q '^def test_' '$root/tests/test_$mod.py'"
-        assert "Property 9: $proj tests/test_$mod.py imports pytest" "grep -q '^import pytest$' '$root/tests/test_$mod.py'"
-        assert "Property 9: $proj tests/test_$mod.py decorated with @pytest.mark.smoke" "grep -q '^@pytest.mark.smoke$' '$root/tests/test_$mod.py'"
+        assert "Property 9: $proj tests/test_python_module.py matches the fixture verbatim" "diff -q '$FIXTURE_DIR/template/tests/test_python_module.py' '$root/tests/test_python_module.py' >/dev/null 2>&1"
         (cd "$root" && pytest -q >/dev/null 2>&1)
         assert "Property 9: $proj pytest exits 0" "[ $? -eq 0 ]"
     done
@@ -222,21 +202,24 @@ for ((i = 0; i < ITERATIONS; i++)); do
     run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
     pyproject="$WORKDIR/$proj/pyproject.toml"
     assert "Property 10: $proj pyproject.toml exists" "[ -f '$pyproject' ]"
+    assert "Property 10: $proj pyproject.toml declares project name" "grep -q \"name = \\\"$proj\\\"\" '$pyproject'"
     assert "Property 10: $proj pyproject.toml declares pytest dev dependency" "grep -q 'dev = \[\"pytest\"\]' '$pyproject'"
     assert "Property 10: $proj pyproject.toml registers smoke marker" "grep -q 'smoke: marks a test as a smoke test' '$pyproject'"
+    assert "Property 10: $proj pyproject.toml overwrites the template's own copy" "! grep -q 'placeholder-should-be-overwritten' '$pyproject'"
 done
 echo "Property 10 (project manifest completeness): done"
 
-# --- Property 13: design.md template source-layout note ---
+# --- Property 15: Readme manifest completeness ---
 for ((i = 0; i < ITERATIONS; i++)); do
-    proj="p13-$(random_valid_project_name)-$i"
+    proj="p15-$(random_valid_project_name)-$i"
     mod=$(random_valid_module_name)
     run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
-    design_md="$WORKDIR/$proj/specs/design.md"
-    assert "Property 13: $proj design.md has Source Layout Constraint heading" "grep -q '^## Source Layout Constraint$' '$design_md'"
-    assert "Property 13: $proj design.md note references src/$mod/" "grep -q \"src/$mod/\" '$design_md'"
+    readme="$WORKDIR/$proj/README.md"
+    assert "Property 15: $proj README.md exists" "[ -f '$readme' ]"
+    assert "Property 15: $proj README.md heading contains project name" "[ \"\$(head -n1 '$readme')\" = '# $proj' ]"
+    assert "Property 15: $proj README.md overwrites the template's own copy" "! grep -q 'placeholder-should-be-overwritten' '$readme'"
 done
-echo "Property 13 (design.md template source-layout note): done"
+echo "Property 15 (readme manifest completeness): done"
 
 # --- Property 11: Git repository initialization completeness ---
 GIT_IDENTITY_OK=0
@@ -262,17 +245,10 @@ if [ "$GIT_IDENTITY_OK" = "1" ]; then
         required_tracked_paths=(
             "src/$mod/__init__.py"
             "tests/__init__.py"
-            "tests/test_$mod.py"
+            "tests/test_python_module.py"
             "pyproject.toml"
-            "specs/requirements.md"
-            "specs/design.md"
-            "specs/tasks.md"
-            ".claude/commands/spec-requirements.md"
-            ".claude/commands/spec-design.md"
-            ".claude/commands/spec-tasks.md"
-            ".claude/commands/implement-task.md"
-            ".claude/commands/review.md"
-            ".claude/CLAUDE.md"
+            "README.md"
+            ".claude/skills/spec-requirements/SKILL.md"
             ".gitignore"
         )
         for p in "${required_tracked_paths[@]}"; do
@@ -284,13 +260,13 @@ else
     echo "Property 11 (git repository initialization completeness): SKIPPED (git unavailable or no identity configured)"
 fi
 
-# --- Property 12: Graceful degradation without git ---
-FAKE_BIN="$WORKDIR/.fake_bin_no_git"
-mkdir -p "$FAKE_BIN"
-for tool in mkdir touch cat find sed; do
+# --- Property 12: Missing git is a hard failure before any clone attempt ---
+NO_GIT_BIN="$WORKDIR/.fake_bin_no_git"
+mkdir -p "$NO_GIT_BIN"
+for tool in mkdir touch cat find sed mv rm mktemp; do
     tool_path=$(command -v "$tool" 2>/dev/null)
     if [ -n "$tool_path" ]; then
-        ln -sf "$tool_path" "$FAKE_BIN/$tool"
+        ln -sf "$tool_path" "$NO_GIT_BIN/$tool"
     fi
 done
 
@@ -298,50 +274,15 @@ for ((i = 0; i < ITERATIONS; i++)); do
     proj="p12-$(random_valid_project_name)-$i"
     mod=$(random_valid_module_name)
     capture="$WORKDIR/.scaffold_out_p12"
-    (cd "$WORKDIR" && printf '%s' "$proj"$'\n'"$mod"$'\n' | env PATH="$FAKE_BIN" "$SCAFFOLD" >"$capture" 2>&1)
+    (cd "$WORKDIR" && printf '%s' "$proj"$'\n'"$mod"$'\n' | env PATH="$NO_GIT_BIN" SDD_TEMPLATE_URL="$SDD_TEMPLATE_URL" "$SCAFFOLD" >"$capture" 2>&1)
     STATUS=$?
     OUTPUT=$(cat "$capture" 2>/dev/null)
     rm -f "$capture"
-    root="$WORKDIR/$proj"
-    assert "Property 12: $proj exits 0 without git" "[ $STATUS -eq 0 ]"
-    assert "Property 12: $proj prints git warning" "echo \"\$OUTPUT\" | grep -qi 'git not found'"
-    assert "Property 12: $proj creates full file structure" "[ -f '$root/src/$mod/__init__.py' ] && [ -f '$root/pyproject.toml' ] && [ -f '$root/.gitignore' ]"
-    assert "Property 12: $proj creates no .git directory" "[ ! -d '$root/.git' ]"
+    assert "Property 12: $proj exits non-zero without git" "[ $STATUS -ne 0 ]"
+    assert "Property 12: $proj prints git-not-found error" "echo \"\$OUTPUT\" | grep -qi 'git.*not found'"
+    assert "Property 12: $proj creates no Project_Root without git" "[ ! -e '$WORKDIR/$proj' ]"
 done
-echo "Property 12 (graceful degradation without git): done"
-
-# --- Property 14: implement-task.md all-at-once-vs-one-by-one gate content ---
-for ((i = 0; i < ITERATIONS; i++)); do
-    proj="p14-$(random_valid_project_name)-$i"
-    mod=$(random_valid_module_name)
-    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
-    cmd_file="$WORKDIR/$proj/.claude/commands/implement-task.md"
-    assert "Property 14: $proj implement-task.md has gate heading" "grep -q '^## Before implementing$' '$cmd_file'"
-    assert "Property 14: $proj implement-task.md mentions AskUserQuestion tool" "grep -q 'AskUserQuestion' '$cmd_file'"
-    assert "Property 14: $proj implement-task.md mentions skipping the question for one remaining task" "grep -q 'exactly one unchecked task remains' '$cmd_file'"
-    assert "Property 14: $proj implement-task.md mentions stopping on error without continuing" "grep -q 'stop immediately' '$cmd_file'"
-done
-echo "Property 14 (implement-task.md all-at-once-vs-one-by-one gate content): done"
-
-# --- Property 15: CLAUDE.md development discipline content completeness ---
-for ((i = 0; i < ITERATIONS; i++)); do
-    proj="p15-$(random_valid_project_name)-$i"
-    mod=$(random_valid_module_name)
-    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
-    claude_md="$WORKDIR/$proj/.claude/CLAUDE.md"
-    assert "Property 15: $proj CLAUDE.md has development discipline heading" "grep -q '^## Development discipline$' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs not modifying code unless asked" "grep -qF 'Do not modify code unless explicitly asked to implement or change something.' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs inspecting first on investigation/review tasks" "grep -qF 'inspect the existing implementation first and stop for review before making changes.' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs not committing or pushing unless instructed" "grep -qF 'Do not commit or push unless explicitly instructed.' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs preserving unrelated working-tree changes" "grep -qF 'Preserve unrelated working-tree changes.' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs not reverting user changes unless instructed" "grep -qF 'Do not revert existing user changes unless explicitly instructed.' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs keeping scope aligned with approved task" "grep -qF 'Keep implementation scope aligned with the approved task.' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs not inventing missing behavior" "grep -qF 'Do not invent missing behavior or architectural abstractions before inspecting the existing code.' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs distinguishing unverified changes" "grep -qF 'clearly distinguish it from verified behavior.' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs preferring small incremental changes" "grep -qF 'Prefer small, incremental changes with explicit verification.' '$claude_md'"
-    assert "Property 15: $proj CLAUDE.md instructs not starting unrelated work from stale prompts" "grep -qF 'Do not start unrelated work because of stale, duplicated, or automatically generated task prompts.' '$claude_md'"
-done
-echo "Property 15 (CLAUDE.md development discipline content completeness): done"
+echo "Property 12 (missing git is a hard failure): done"
 
 # --- Property 16: Suggested module name computation and default acceptance ---
 
@@ -398,6 +339,32 @@ for ((i = 0; i < ITERATIONS; i++)); do
     rm -rf "${WORKDIR:?}/${proj:?}"
 done
 echo "Property 16 (suggested module name computation and default acceptance): done"
+
+# --- Property 17: Placeholder package rename leaves no trace ---
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p17-$(random_valid_project_name)-$i"
+    mod=$(random_valid_module_name)
+    run_scaffold "$WORKDIR" "$proj"$'\n'"$mod"$'\n'
+    root="$WORKDIR/$proj"
+    assert "Property 17: $proj src/$mod/ exists after rename" "[ -d '$root/src/$mod' ]"
+    assert "Property 17: $proj src/python_module/ does not exist after rename" "[ ! -d '$root/src/python_module' ]"
+done
+echo "Property 17 (placeholder package rename leaves no trace): done"
+
+# --- Property 18: Clone failure leaves no partially-created Project_Root ---
+for ((i = 0; i < ITERATIONS; i++)); do
+    proj="p18-$(random_valid_project_name)-$i"
+    mod=$(random_valid_module_name)
+    capture="$WORKDIR/.scaffold_out_p18"
+    (cd "$WORKDIR" && printf '%s' "$proj"$'\n'"$mod"$'\n' | env SDD_TEMPLATE_URL="$WORKDIR/.nonexistent-template-$i" "$SCAFFOLD" >"$capture" 2>&1)
+    STATUS=$?
+    OUTPUT=$(cat "$capture" 2>/dev/null)
+    rm -f "$capture"
+    assert "Property 18: $proj exits non-zero on clone failure" "[ $STATUS -ne 0 ]"
+    assert "Property 18: $proj prints clone-failure error" "echo \"\$OUTPUT\" | grep -qi 'failed to clone'"
+    assert "Property 18: $proj creates no Project_Root on clone failure" "[ ! -e '$WORKDIR/$proj' ]"
+done
+echo "Property 18 (clone failure leaves no partial Project_Root): done"
 
 echo ""
 if [ "$FAILURES" -eq 0 ]; then
