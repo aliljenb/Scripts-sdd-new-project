@@ -1,3 +1,13 @@
+---
+name: spec-requirements
+description: SDD - Generate requirements.md for a new feature or bugfix.md for a bug, following the project's SDD template.
+argument-hint: [feature-name]
+disable-model-invocation: true      # only run when the user explicitly types /spec-requirements
+allowed-tools: Read Write Glob Grep # no Bash/Edit — this phase never touches code
+---
+
+If not already existing, generate `specs/$1/requirements.md` using the template at `skills/spec-requirements/template.md`
+
 ## Before writing or editing anything
 
 If any part of the scope is unclear, ambiguous, or could reasonably be
@@ -15,12 +25,12 @@ or changing requirements.md.
   ambiguities are resolved. Minor, non-blocking assumptions can just be
   stated inline in the requirement instead of asked about.
 
-Read the file `specs/requirements.md` and help me create or refine the project requirements.
+Read the file `specs/$1/requirements.md` and help me create or refine the project requirements.
 
 Follow these guidelines:
-- Use the format: "As a [role], I want [feature], so that [benefit]"
+- Use the format: "As a **[user type]**, I want to **[goal]**, so that **[benefit]**"
 - Include acceptance criteria for each requirement
 - Group requirements logically
 - Ensure requirements are testable and measurable
 
-Update `specs/requirements.md` with the refined requirements.
+Update `specs/$1/requirements.md` with the refined requirements.
